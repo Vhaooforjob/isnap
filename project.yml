@@ -1,0 +1,39 @@
+name: iSnap
+options:
+  bundleIdPrefix: dev.isnap
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: 5.0
+    MACOSX_DEPLOYMENT_TARGET: 14.0
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: TXD67UY7X2
+    ENABLE_HARDENED_RUNTIME: YES
+targets:
+  iSnap:
+    type: application
+    platform: macOS
+    sources:
+      - Sources/iSnap
+    resources:
+      - Assets.xcassets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.isnap.app
+        PRODUCT_NAME: iSnap
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Sources/iSnap/Resources/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_ENTITLEMENTS: Sources/iSnap/Resources/iSnap.entitlements
+    scheme:
+      testTargets:
+        - iSnapTests
+  iSnapTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/iSnapTests
+    dependencies:
+      - target: iSnap
