@@ -4,6 +4,11 @@ import Foundation
 
 @MainActor
 final class EditorDocument: ObservableObject {
+    struct AnnotationEditRequest: Identifiable, Equatable {
+        let id: UUID
+        let checkpointOnCommit: Bool
+    }
+
     @Published private(set) var image: NSImage?
     @Published private(set) var sourceName = "Untitled"
     @Published var annotations: [Annotation] = []
@@ -13,6 +18,8 @@ final class EditorDocument: ObservableObject {
     @Published var canvas = CanvasConfiguration()
     @Published var cropAspectRatio = CropAspectRatio.free
     @Published var cropRect: CGRect?
+    @Published private(set) var previewZoom: CGFloat = 1
+    @Published var annotationEditRequest: AnnotationEditRequest?
     @Published private(set) var isCropApplied = false
     @Published private(set) var isDirty = false
 
@@ -77,6 +84,8 @@ final class EditorDocument: ObservableObject {
         undoStack = []
         redoStack = []
         tool = .select
+        previewZoom = 1
+        annotationEditRequest = nil
     }
 
     func add(_ annotation: Annotation) {
@@ -105,6 +114,7 @@ final class EditorDocument: ObservableObject {
         checkpoint()
         annotations.removeAll { $0.id == id }
         selectedAnnotationID = nil
+        if annotationEditRequest?.id == id { annotationEditRequest = nil }
         isDirty = true
     }
 
@@ -179,6 +189,47 @@ final class EditorDocument: ObservableObject {
     }
 
     func markSaved() { isDirty = false }
+
+    func presentEditor(for annotation: Annotation, checkpointOnCommit: Bool = true) {
+        guard annotation.type == .text || annotation.type == .number else { return }
+        selectedAnnotationID = annotation.id
+        annotationEditRequest = AnnotationEditRequest(
+            id: annotation.id,
+            checkpointOnCommit: checkpointOnCommit
+        )
+    }
+
+    func presentEditorForSelection() {
+        guard let annotation = selectedAnnotation else { return }
+        presentEditor(for: annotation)
+    }
+
+    func commitEditor(_ annotation: Annotation) {
+        guard let request = annotationEditRequest, request.id == annotation.id else { return }
+        update(annotation, checkpoint: request.checkpointOnCommit)
+        if annotation.type == .number { style.markerStyle = annotation.markerStyle }
+        annotationEditRequest = nil
+    }
+
+    func cancelEditor() {
+        annotationEditRequest = nil
+    }
+
+    func setPreviewZoom(_ value: CGFloat) {
+        previewZoom = value.clamped(to: 0.25...4)
+    }
+
+    func zoomPreviewIn() {
+        setPreviewZoom(previewZoom * 1.25)
+    }
+
+    func zoomPreviewOut() {
+        setPreviewZoom(previewZoom / 1.25)
+    }
+
+    func resetPreviewZoom() {
+        previewZoom = 1
+    }
 
     private var currentSnapshot: Snapshot {
         Snapshot(

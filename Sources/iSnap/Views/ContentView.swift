@@ -16,7 +16,7 @@ struct ContentView: View {
             if model.section == .editor {
                 AnnotationToolbar(document: model.document)
                 HSplitView {
-                    EditorCanvas(document: model.document)
+                    EditorCanvasHost(document: model.document)
                         .frame(minWidth: 560, minHeight: 420)
                     CanvasSettingsPanel(document: model.document, settings: model.settings)
                 }

@@ -190,10 +190,8 @@ private enum AnnotationRenderer {
                 context.addEllipse(in: frame)
                 paintPath(annotation, context)
             case .line, .arrow:
-                let rawStart = annotation.points.first.map { CGPoint(x: annotation.frame.origin.x + $0.x, y: annotation.frame.origin.y + $0.y) }
-                    ?? annotation.frame.origin
-                let rawEnd = annotation.points.last.map { CGPoint(x: annotation.frame.origin.x + $0.x, y: annotation.frame.origin.y + $0.y) }
-                    ?? CGPoint(x: annotation.frame.maxX, y: annotation.frame.maxY)
+                let rawStart = annotation.lineStartPoint
+                let rawEnd = annotation.lineEndPoint
                 let start = map(rawStart)
                 let end = map(rawEnd)
                 context.move(to: start)
@@ -213,12 +211,14 @@ private enum AnnotationRenderer {
             case .number:
                 context.setFillColor(annotation.stroke.nsColor.cgColor)
                 context.fillEllipse(in: frame)
+                let markerLabel = annotation.markerLabel
+                let markerScale = min(0.58, 0.9 / CGFloat(max(1, markerLabel.count)))
                 let label = Annotation(
                     type: .text,
                     frame: annotation.frame,
                     stroke: .white,
-                    text: String(annotation.number ?? 1),
-                    fontSize: min(annotation.frame.width, annotation.frame.height) * 0.58,
+                    text: markerLabel,
+                    fontSize: min(annotation.frame.width, annotation.frame.height) * markerScale,
                     fontStyle: .bold,
                     textAlignment: .center
                 )
@@ -267,8 +267,13 @@ private enum AnnotationRenderer {
         )
         let line = CTLineCreateWithAttributedString(attributed)
         let bounds = CTLineGetBoundsWithOptions(line, [.useGlyphPathBounds])
+        let x: CGFloat = switch annotation.textAlignment {
+        case .left: frame.minX - bounds.minX
+        case .center: frame.midX - bounds.width / 2 - bounds.minX
+        case .right: frame.maxX - bounds.width - bounds.minX
+        }
         let y = frame.midY - bounds.height / 2 - bounds.minY
-        context.textPosition = CGPoint(x: frame.minX, y: y)
+        context.textPosition = CGPoint(x: x, y: y)
         CTLineDraw(line, context)
     }
 }

@@ -9,8 +9,9 @@ This document records the translation from the public WinShot repository (review
 | Window enumeration, thumbnails, capture | `SCShareableContent` and `SCScreenshotManager` | Implemented |
 | Global hotkeys | Carbon `RegisterEventHotKey` | Implemented |
 | System tray | `NSStatusItem` menu | Implemented |
-| Rectangle, ellipse, arrow, line, text | CoreGraphics/CoreText annotation renderer | Implemented |
-| Number and spotlight tools | CoreGraphics marker and even-odd dim overlay | Implemented |
+| Rectangle, ellipse, arrow, line, text | CoreGraphics/CoreText renderer with directional endpoints and inline text editing | Implemented |
+| Editor preview | Fit, zoom in/out, trackpad pinch, and pan while zoomed | Implemented |
+| Number/letter and spotlight tools | Editable auto-sequenced numeric/alphabetic marker plus even-odd dim overlay | Implemented |
 | Transform tools | AppKit hit testing, move/resize, rotation inspector | Implemented |
 | Undo / redo | Snapshot history in `EditorDocument` | Implemented |
 | Non-destructive crop | Original-image snapshot plus annotation translation | Implemented |

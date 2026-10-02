@@ -25,6 +25,30 @@ struct AnnotationToolbar: View {
                     .disabled(!document.canRedo)
                 Button(role: .destructive, action: document.deleteSelection) { Image(systemName: "trash") }
                     .disabled(document.selectedAnnotationID == nil)
+                if let selected = document.selectedAnnotation,
+                   selected.type == .text || selected.type == .number {
+                    Button("Edit…", systemImage: "pencil") {
+                        document.presentEditor(for: selected)
+                    }
+                    .help(selected.type == .text ? "Edit text" : "Edit marker style and value")
+                }
+                Divider().frame(height: 22)
+                HStack(spacing: 3) {
+                    Button(action: document.zoomPreviewOut) {
+                        Image(systemName: "minus.magnifyingglass")
+                    }
+                    .help("Zoom out")
+                    Button(action: document.resetPreviewZoom) {
+                        Text("\(Int((document.previewZoom * 100).rounded()))%")
+                            .monospacedDigit()
+                            .frame(minWidth: 38)
+                    }
+                    .help("Fit preview")
+                    Button(action: document.zoomPreviewIn) {
+                        Image(systemName: "plus.magnifyingglass")
+                    }
+                    .help("Zoom in")
+                }
                 Divider().frame(height: 22)
                 ColorPicker("Stroke", selection: strokeBinding, supportsOpacity: true)
                     .labelsHidden().frame(width: 28)
@@ -129,4 +153,3 @@ struct AnnotationToolbar: View {
         }
     }
 }
-

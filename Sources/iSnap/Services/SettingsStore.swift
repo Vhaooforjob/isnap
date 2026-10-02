@@ -8,9 +8,14 @@ final class SettingsStore: ObservableObject {
     }
 
     private let fileURL: URL
+    private let userDefaults: UserDefaults
     private var saveTask: Task<Void, Never>?
 
-    init(fileManager: FileManager = .default) {
+    private static let disabledBackgroundDefaultMigrationKey =
+        "settings.didDisableBackgroundByDefault.v1"
+
+    init(fileManager: FileManager = .default, userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
         let base = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("iSnap", isDirectory: true)
         fileURL = base.appendingPathComponent("settings.json")
@@ -19,6 +24,11 @@ final class SettingsStore: ObservableObject {
             value = try JSONDecoder().decode(AppSettings.self, from: data)
         } catch {
             value = AppSettings()
+        }
+        if !userDefaults.bool(forKey: Self.disabledBackgroundDefaultMigrationKey) {
+            value.canvas.showBackground = false
+            userDefaults.set(true, forKey: Self.disabledBackgroundDefaultMigrationKey)
+            try? saveNow()
         }
     }
 
@@ -48,4 +58,3 @@ private extension JSONEncoder {
         return encoder
     }
 }
-
