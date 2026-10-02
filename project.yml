@@ -17,8 +17,8 @@ targets:
     platform: macOS
     sources:
       - Sources/iSnap
-    resources:
-      - Assets.xcassets
+      - path: Assets.xcassets
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.isnap.app

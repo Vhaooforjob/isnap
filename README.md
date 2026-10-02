@@ -1,5 +1,7 @@
 # iSnap
 
+![iSnap logo](docs/assets/isnap-logo-v1.png)
+
 iSnap is a native macOS screenshot editor inspired by the workflows and feature set of [WinShot](https://github.com/mrgoonie/winshot). It is implemented in Swift with SwiftUI, AppKit, ScreenCaptureKit, CoreGraphics, Carbon hotkeys, and ServiceManagement—without a web view or JavaScript runtime.
 
 ## Current feature set

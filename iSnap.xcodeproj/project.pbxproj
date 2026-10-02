@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		131C9462160D353BEA43A7B2 /* BackgroundImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6706D240A38FDEC286D91A80 /* BackgroundImageStore.swift */; };
+		157B08AE03A0D18833D5AAB3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 12D381E5CF53D210141C7703 /* Assets.xcassets */; };
 		1DADBF2769BA64770BAD5FAD /* AnnotationToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5445A9E81AE86F23A3D843E /* AnnotationToolbar.swift */; };
 		237587E31DFFDFDBD6B57CFF /* ExportRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1234496FB9B35E4851BE1EA /* ExportRenderer.swift */; };
 		2C2A8951D883C85E29BB6E65 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F69C342602FADCD08FA79C86 /* SettingsView.swift */; };
@@ -51,6 +52,7 @@
 /* Begin PBXFileReference section */
 		01E36F9109267CDC739302F5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		09F557AADDA78A880E09D3C6 /* CaptureToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureToolbar.swift; sourceTree = "<group>"; };
+		12D381E5CF53D210141C7703 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		13F4542855F351174EA72549 /* EditorDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorDocument.swift; sourceTree = "<group>"; };
 		3948BEC76FA8E00817E48D1C /* iSnap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iSnap.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4773E5F04F6375F4502ECC31 /* EditorCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorCanvas.swift; sourceTree = "<group>"; };
@@ -125,6 +127,7 @@
 		A57DD72FA3B96D40722A4103 = {
 			isa = PBXGroup;
 			children = (
+				12D381E5CF53D210141C7703 /* Assets.xcassets */,
 				0ECBA37D0EBC95A7B6C65035 /* Sources */,
 				7616866D5FD5FF73B9447430 /* Tests */,
 				5571A912DDDCBCA430E84C0C /* Products */,
@@ -212,6 +215,7 @@
 			buildConfigurationList = 153C71BF2685F3D07E0A36EC /* Build configuration list for PBXNativeTarget "iSnap" */;
 			buildPhases = (
 				30CEF6FEF63F6E5954C57608 /* Sources */,
+				56890D462B8F01165EB16A7C /* Resources */,
 			);
 			buildRules = (
 			);
@@ -252,9 +256,11 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					2EBBCB03587F9A4AB99D350A = {
+						DevelopmentTeam = TXD67UY7X2;
 						ProvisioningStyle = Automatic;
 					};
 					EE1392BC878FF83BF95509D0 = {
+						DevelopmentTeam = TXD67UY7X2;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -278,6 +284,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		56890D462B8F01165EB16A7C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				157B08AE03A0D18833D5AAB3 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		30CEF6FEF63F6E5954C57608 /* Sources */ = {
