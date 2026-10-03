@@ -144,6 +144,46 @@ struct LibraryItem: Identifiable, Hashable {
     var name: String { url.lastPathComponent }
 }
 
+struct StickerPreset: Identifiable, Hashable {
+    let emoji: String
+    let name: String
+
+    var id: String { emoji }
+
+    static let all: [StickerPreset] = [
+        .init(emoji: "😀", name: "Smile"),
+        .init(emoji: "😂", name: "Laugh"),
+        .init(emoji: "😍", name: "Love"),
+        .init(emoji: "😎", name: "Cool"),
+        .init(emoji: "🤔", name: "Thinking"),
+        .init(emoji: "😱", name: "Surprised"),
+        .init(emoji: "🥳", name: "Celebrate"),
+        .init(emoji: "🤩", name: "Starstruck"),
+        .init(emoji: "👍", name: "Thumbs Up"),
+        .init(emoji: "👎", name: "Thumbs Down"),
+        .init(emoji: "👏", name: "Clap"),
+        .init(emoji: "🙏", name: "Thanks"),
+        .init(emoji: "💪", name: "Strong"),
+        .init(emoji: "👀", name: "Look"),
+        .init(emoji: "❤️", name: "Heart"),
+        .init(emoji: "🔥", name: "Fire"),
+        .init(emoji: "✨", name: "Sparkles"),
+        .init(emoji: "🎉", name: "Party"),
+        .init(emoji: "💯", name: "One Hundred"),
+        .init(emoji: "✅", name: "Done"),
+        .init(emoji: "❌", name: "Wrong"),
+        .init(emoji: "⚠️", name: "Warning"),
+        .init(emoji: "💡", name: "Idea"),
+        .init(emoji: "📌", name: "Pin"),
+        .init(emoji: "🚀", name: "Launch"),
+        .init(emoji: "🎯", name: "Target"),
+        .init(emoji: "⭐️", name: "Star"),
+        .init(emoji: "👑", name: "Crown"),
+        .init(emoji: "🐞", name: "Bug"),
+        .init(emoji: "🔒", name: "Locked")
+    ]
+}
+
 struct RGBAColor: Codable, Hashable {
     var red: CGFloat
     var green: CGFloat

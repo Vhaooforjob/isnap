@@ -25,5 +25,13 @@ actor LibraryService {
         guard target.deletingLastPathComponent() == root else { return }
         try FileManager.default.trashItem(at: target, resultingItemURL: nil)
     }
-}
 
+    @discardableResult
+    func deleteAll(in rootFolder: URL) throws -> Int {
+        let libraryItems = try items(in: rootFolder)
+        for item in libraryItems {
+            try delete(item, rootFolder: rootFolder)
+        }
+        return libraryItems.count
+    }
+}

@@ -185,6 +185,31 @@ final class AppModel: ObservableObject {
         } catch { report(error) }
     }
 
+    func insertSticker(_ sticker: StickerPreset) {
+        guard document.image != nil else {
+            errorMessage = "Capture or open an image before adding a sticker."
+            return
+        }
+        do {
+            let data = try StickerRenderer.pngData(for: sticker.emoji)
+            let sourceSize = document.imagePixelSize
+            let side = min(240, max(32, min(sourceSize.width, sourceSize.height) * 0.22))
+            var annotation = Annotation(
+                type: .image,
+                frame: CGRect(
+                    x: (sourceSize.width - side) / 2,
+                    y: (sourceSize.height - side) / 2,
+                    width: side,
+                    height: side
+                )
+            )
+            annotation.imageData = data
+            annotation.imageOpacity = 1
+            document.add(annotation)
+            statusText = "Added \(sticker.name) sticker"
+        } catch { report(error) }
+    }
+
     func quickSave() {
         do {
             settings.value.canvas = document.canvas
@@ -226,7 +251,19 @@ final class AppModel: ObservableObject {
         do {
             try await libraryService.delete(item, rootFolder: settings.value.quickSave.folder)
             await reloadLibrary()
+            statusText = "Moved \(item.name) to Trash"
         } catch { report(error) }
+    }
+
+    func deleteAllLibraryItems() async {
+        do {
+            let count = try await libraryService.deleteAll(in: settings.value.quickSave.folder)
+            await reloadLibrary()
+            statusText = count == 1 ? "Moved 1 screenshot to Trash" : "Moved \(count) screenshots to Trash"
+        } catch {
+            await reloadLibrary()
+            report(error)
+        }
     }
 
     func revealLibrary() {
@@ -362,4 +399,44 @@ final class AppModel: ObservableObject {
         value.dateFormat = "yyyyMMdd-HHmmss"
         return value
     }()
+}
+
+enum StickerRenderer {
+    static func pngData(for emoji: String, pixelSize: Int = 256) throws -> Data {
+        guard pixelSize > 0,
+              let bitmap = NSBitmapImageRep(
+                  bitmapDataPlanes: nil,
+                  pixelsWide: pixelSize,
+                  pixelsHigh: pixelSize,
+                  bitsPerSample: 8,
+                  samplesPerPixel: 4,
+                  hasAlpha: true,
+                  isPlanar: false,
+                  colorSpaceName: .deviceRGB,
+                  bitmapFormat: [.alphaFirst],
+                  bytesPerRow: 0,
+                  bitsPerPixel: 0
+              ), let graphicsContext = NSGraphicsContext(bitmapImageRep: bitmap) else {
+            throw ExportError.encodingFailed
+        }
+
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = graphicsContext
+        graphicsContext.cgContext.clear(CGRect(x: 0, y: 0, width: pixelSize, height: pixelSize))
+
+        let fontSize = CGFloat(pixelSize) * 0.68
+        let font = NSFont(name: "Apple Color Emoji", size: fontSize) ?? .systemFont(ofSize: fontSize)
+        let value = NSAttributedString(string: emoji, attributes: [.font: font])
+        let size = value.size()
+        value.draw(at: CGPoint(
+            x: (CGFloat(pixelSize) - size.width) / 2,
+            y: (CGFloat(pixelSize) - size.height) / 2
+        ))
+        NSGraphicsContext.restoreGraphicsState()
+
+        guard let data = bitmap.representation(using: .png, properties: [:]) else {
+            throw ExportError.encodingFailed
+        }
+        return data
+    }
 }

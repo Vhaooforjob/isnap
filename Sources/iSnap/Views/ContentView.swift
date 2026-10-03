@@ -6,13 +6,7 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             CaptureToolbar()
-            Picker("Section", selection: $model.section) {
-                ForEach(AppModel.Section.allCases) { Label($0.rawValue, systemImage: $0.symbol).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(width: 260)
-            .padding(.vertical, 7)
+            QuickAccessBar()
             if model.section == .editor {
                 AnnotationToolbar(document: model.document)
                 HSplitView {
@@ -26,6 +20,7 @@ struct ContentView: View {
             statusBar
         }
         .frame(minWidth: 940, minHeight: 680)
+        .task { await model.reloadLibrary() }
         .sheet(isPresented: $model.isShowingSettings) {
             SettingsView(store: model.settings).environmentObject(model)
         }
@@ -80,5 +75,115 @@ struct ContentView: View {
         .padding(.horizontal, 12)
         .frame(height: 30)
         .background(.bar)
+    }
+}
+
+private struct QuickAccessBar: View {
+    @EnvironmentObject private var model: AppModel
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            content(recentItemLimit: 4, showsNames: true)
+                .fixedSize(horizontal: true, vertical: false)
+            content(recentItemLimit: 4, showsNames: false)
+            content(recentItemLimit: 2, showsNames: false)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(Color(nsColor: .controlBackgroundColor))
+        .overlay(alignment: .bottom) { Divider() }
+    }
+
+    private func content(recentItemLimit: Int, showsNames: Bool) -> some View {
+        HStack(spacing: 8) {
+            sectionButton(.editor)
+            sectionButton(.library)
+            Divider().frame(height: 24)
+            Text("Recent")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            if model.libraryItems.isEmpty {
+                Text("No saved screenshots")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            } else {
+                ForEach(Array(model.libraryItems.prefix(recentItemLimit))) { item in
+                    RecentLibraryItem(item: item, showsName: showsNames)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func sectionButton(_ section: AppModel.Section) -> some View {
+        Button {
+            model.section = section
+        } label: {
+            Label(
+                section == .library ? "Library \(model.libraryItems.count)" : section.rawValue,
+                systemImage: section.symbol
+            )
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .tint(model.section == section ? .accentColor : nil)
+        .help("Open \(section.rawValue)")
+    }
+}
+
+private struct RecentLibraryItem: View {
+    @EnvironmentObject private var model: AppModel
+    let item: LibraryItem
+    let showsName: Bool
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Button {
+                model.openLibraryItem(item)
+            } label: {
+                HStack(spacing: 6) {
+                    thumbnail
+                    if showsName {
+                        Text(item.name)
+                            .font(.caption)
+                            .lineLimit(1)
+                            .frame(maxWidth: 96, alignment: .leading)
+                    }
+                }
+                .padding(3)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Open \(item.name) in Editor")
+
+            Button(role: .destructive) {
+                Task { await model.deleteLibraryItem(item) }
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Move \(item.name) to Trash")
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 7))
+    }
+
+    private var thumbnail: some View {
+        Group {
+            if let image = NSImage(contentsOf: item.url) {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: "photo")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: 30, height: 24)
+        .background(Color.black.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 }

@@ -3,6 +3,7 @@ import SwiftUI
 struct LibraryView: View {
     @EnvironmentObject private var model: AppModel
     @State private var selected: LibraryItem.ID?
+    @State private var isConfirmingDeleteAll = false
 
     private let columns = [GridItem(.adaptive(minimum: 180, maximum: 260), spacing: 16)]
 
@@ -14,6 +15,10 @@ struct LibraryView: View {
                 Spacer()
                 Button("Reveal in Finder", systemImage: "folder") { model.revealLibrary() }
                 Button("Refresh", systemImage: "arrow.clockwise") { Task { await model.reloadLibrary() } }
+                Button("Move All to Trash", systemImage: "trash", role: .destructive) {
+                    isConfirmingDeleteAll = true
+                }
+                .disabled(model.libraryItems.isEmpty)
             }
             .padding()
             Divider()
@@ -47,6 +52,18 @@ struct LibraryView: View {
             guard let selected, let item = model.libraryItems.first(where: { $0.id == selected }) else { return }
             Task { await model.deleteLibraryItem(item) }
         }
+        .confirmationDialog(
+            "Move all screenshots to Trash?",
+            isPresented: $isConfirmingDeleteAll
+        ) {
+            Button("Move \(model.libraryItems.count) Screenshots to Trash", role: .destructive) {
+                selected = nil
+                Task { await model.deleteAllLibraryItems() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes every screenshot currently shown in the Library. You can recover them from the Trash.")
+        }
     }
 }
 
@@ -79,4 +96,3 @@ private struct LibraryCard: View {
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2))
     }
 }
-

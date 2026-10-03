@@ -12,6 +12,15 @@ final class ModelTests: XCTestCase {
         XCTAssertFalse(CanvasConfiguration().showBackground)
     }
 
+    func testStickerRendererCreatesTransparentPNG() throws {
+        let data = try StickerRenderer.pngData(for: "🚀", pixelSize: 128)
+        let image = try XCTUnwrap(NSImage(data: data))
+        let representation = try XCTUnwrap(image.representations.first)
+        XCTAssertEqual(representation.pixelsWide, 128)
+        XCTAssertEqual(representation.pixelsHigh, 128)
+        XCTAssertEqual(StickerPreset.all.count, Set(StickerPreset.all.map(\.id)).count)
+    }
+
     func testAnnotationNormalizesReverseDrag() {
         let item = Annotation(
             type: .rectangle,
