@@ -20,6 +20,12 @@ struct Annotation: Identifiable, Codable, Hashable {
     var dimOpacity: CGFloat = 0.7
     var markerStyle = MarkerStyle.number
     var number: Int?
+    var imageData: Data?
+    var imageOpacity: CGFloat?
+
+    var effectiveImageOpacity: CGFloat {
+        (imageOpacity ?? 1).clamped(to: 0...1)
+    }
 
     enum FontStyle: String, CaseIterable, Identifiable, Codable {
         case regular, bold, italic, boldItalic
@@ -165,4 +171,15 @@ struct CanvasConfiguration: Codable, Equatable {
     var borderColor = RGBAColor(.black)
     var borderOpacity: CGFloat = 1
     var borderPosition = BorderPosition.center
+    var watermark: WatermarkConfiguration?
+}
+
+struct WatermarkConfiguration: Codable, Equatable {
+    var kind = WatermarkContentKind.text
+    var text = "iSnap"
+    var imageData: Data?
+    var opacity: CGFloat = 0.35
+    var placement = WatermarkPlacement.bottomRight
+    var sizePercent: CGFloat = 18
+    var textColor = RGBAColor(.white)
 }

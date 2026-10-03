@@ -144,6 +144,47 @@ final class AppModel: ObservableObject {
         accept(CaptureResult(image: image, sourceName: "Clipboard"))
     }
 
+    func insertOverlayImage() {
+        guard document.image != nil else {
+            errorMessage = "Capture or open an image before inserting an overlay."
+            return
+        }
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.png, .jpeg, .tiff, .heic]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let data = try BackgroundImageStore.portableImageData(from: url)
+            guard let image = NSImage(data: data),
+                  let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+                throw ExportError.invalidImage
+            }
+            let sourceSize = document.imagePixelSize
+            let intrinsicSize = CGSize(width: cgImage.width, height: cgImage.height)
+            let scale = min(
+                sourceSize.width * 0.35 / intrinsicSize.width,
+                sourceSize.height * 0.35 / intrinsicSize.height
+            )
+            let size = CGSize(
+                width: max(24, intrinsicSize.width * scale),
+                height: max(24, intrinsicSize.height * scale)
+            )
+            var annotation = Annotation(
+                type: .image,
+                frame: CGRect(
+                    x: (sourceSize.width - size.width) / 2,
+                    y: (sourceSize.height - size.height) / 2,
+                    width: size.width,
+                    height: size.height
+                )
+            )
+            annotation.imageData = data
+            annotation.imageOpacity = 1
+            document.add(annotation)
+            statusText = "Inserted \(url.lastPathComponent)"
+        } catch { report(error) }
+    }
+
     func quickSave() {
         do {
             settings.value.canvas = document.canvas

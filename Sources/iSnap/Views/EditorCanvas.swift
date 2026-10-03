@@ -234,12 +234,23 @@ final class InteractiveCanvasView: NSView {
                 annotation.setLineEndpoints(start: originalAnnotation!.lineStartPoint, end: point)
             } else if dragHandle == .boundsBottomRight {
                 let frame = originalAnnotation!.normalizedFrame
-                annotation.frame = CGRect(
-                    x: frame.minX,
-                    y: frame.minY,
-                    width: max(12, point.x - frame.minX),
-                    height: max(12, point.y - frame.minY)
-                )
+                if annotation.type == .image, frame.height > 0 {
+                    let aspectRatio = frame.width / frame.height
+                    let width = max(24, point.x - frame.minX)
+                    annotation.frame = CGRect(
+                        x: frame.minX,
+                        y: frame.minY,
+                        width: width,
+                        height: max(24, width / aspectRatio)
+                    )
+                } else {
+                    annotation.frame = CGRect(
+                        x: frame.minX,
+                        y: frame.minY,
+                        width: max(12, point.x - frame.minX),
+                        height: max(12, point.y - frame.minY)
+                    )
+                }
             } else {
                 annotation.frame.origin = CGPoint(
                     x: originalAnnotation!.frame.origin.x + point.x - start.x,

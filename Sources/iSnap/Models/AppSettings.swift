@@ -14,6 +14,23 @@ struct AppSettings: Codable, Equatable {
         var fullScreen = "⌃⌥1"
         var region = "⌃⌥2"
         var window = "⌃⌥3"
+        var saveEditedImage = "⌘S"
+        var copyEditedImage = "⌘C"
+
+        private enum CodingKeys: String, CodingKey {
+            case fullScreen, region, window, saveEditedImage, copyEditedImage
+        }
+
+        init() {}
+
+        init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            fullScreen = try values.decodeIfPresent(String.self, forKey: .fullScreen) ?? "⌃⌥1"
+            region = try values.decodeIfPresent(String.self, forKey: .region) ?? "⌃⌥2"
+            window = try values.decodeIfPresent(String.self, forKey: .window) ?? "⌃⌥3"
+            saveEditedImage = try values.decodeIfPresent(String.self, forKey: .saveEditedImage) ?? "⌘S"
+            copyEditedImage = try values.decodeIfPresent(String.self, forKey: .copyEditedImage) ?? "⌘C"
+        }
     }
 
     struct StartupSettings: Codable, Equatable {

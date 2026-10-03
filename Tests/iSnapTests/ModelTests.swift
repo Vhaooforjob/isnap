@@ -166,14 +166,171 @@ final class ModelTests: XCTestCase {
         XCTAssertEqual(punctuationKey?.keyCode, 47)
     }
 
+    func testEditorShortcutParser() {
+        let save = EditorKeyboardShortcut.parse("⌘S")
+        XCTAssertEqual(save?.key.character, "s")
+        XCTAssertTrue(save?.modifiers.contains(.command) == true)
+
+        let customCopy = EditorKeyboardShortcut.parse("⌃⌥K")
+        XCTAssertEqual(customCopy?.key.character, "k")
+        XCTAssertTrue(customCopy?.modifiers.contains(.control) == true)
+        XCTAssertTrue(customCopy?.modifiers.contains(.option) == true)
+    }
+
+    func testLegacyHotkeySettingsReceiveEditorShortcutDefaults() throws {
+        let data = Data(#"{"fullScreen":"⌃⌥1","region":"⌃⌥2","window":"⌃⌥3"}"#.utf8)
+        let decoded = try JSONDecoder().decode(AppSettings.HotkeySettings.self, from: data)
+        XCTAssertEqual(decoded.saveEditedImage, "⌘S")
+        XCTAssertEqual(decoded.copyEditedImage, "⌘C")
+    }
+
     func testSettingsRoundTrip() throws {
         var settings = AppSettings()
         settings.export.defaultFormat = .jpeg
         settings.canvas.outputRatio = .square
         settings.cloud.r2.bucket = "screenshots"
+        settings.hotkeys.saveEditedImage = "⌘⇧K"
+        settings.hotkeys.copyEditedImage = "⌃⌥C"
+        settings.canvas.watermark = WatermarkConfiguration(
+            kind: .image,
+            text: "Internal",
+            imageData: Data([1, 2, 3]),
+            opacity: 0.42,
+            placement: .tiled,
+            sizePercent: 22,
+            textColor: .red
+        )
         settings.backgroundImages = [URL(fileURLWithPath: "/tmp/background.jpg")]
         let data = try JSONEncoder().encode(settings)
         XCTAssertEqual(try JSONDecoder().decode(AppSettings.self, from: data), settings)
+    }
+
+    func testImageOverlayAndWatermarkUseFinalRenderer() async throws {
+        try await MainActor.run {
+            func makeImage(color: NSColor, size: CGSize) throws -> (NSImage, Data) {
+                guard let context = CGContext(
+                    data: nil,
+                    width: Int(size.width),
+                    height: Int(size.height),
+                    bitsPerComponent: 8,
+                    bytesPerRow: 0,
+                    space: CGColorSpaceCreateDeviceRGB(),
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                ) else { throw ExportError.invalidImage }
+                context.setFillColor(color.cgColor)
+                context.fill(CGRect(origin: .zero, size: size))
+                guard let cgImage = context.makeImage(),
+                      let data = NSBitmapImageRep(cgImage: cgImage).representation(using: .png, properties: [:]) else {
+                    throw ExportError.encodingFailed
+                }
+                return (NSImage(cgImage: cgImage, size: size), data)
+            }
+
+            func centerColor(_ image: NSImage) throws -> NSColor {
+                guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
+                      let color = NSBitmapImageRep(cgImage: cgImage)
+                        .colorAt(x: cgImage.width / 2, y: cgImage.height / 2)?
+                        .usingColorSpace(.sRGB) else {
+                    throw ExportError.invalidImage
+                }
+                return color
+            }
+
+            func matchingPixelCount(_ image: NSImage, predicate: (NSColor) -> Bool) throws -> Int {
+                guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+                    throw ExportError.invalidImage
+                }
+                let bitmap = NSBitmapImageRep(cgImage: cgImage)
+                var count = 0
+                for y in 0..<cgImage.height {
+                    for x in 0..<cgImage.width {
+                        if let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB), predicate(color) {
+                            count += 1
+                        }
+                    }
+                }
+                return count
+            }
+
+            let (base, _) = try makeImage(color: .white, size: CGSize(width: 100, height: 100))
+            let (_, redData) = try makeImage(color: .red, size: CGSize(width: 20, height: 20))
+            var canvas = CanvasConfiguration()
+            canvas.cornerRadius = 0
+            canvas.shadowSize = 0
+
+            var overlay = Annotation(type: .image, frame: CGRect(x: 25, y: 25, width: 50, height: 50))
+            overlay.imageData = redData
+            overlay.imageOpacity = 0.5
+            let overlayResult = try ExportRenderer.render(RenderRequest(
+                image: base,
+                annotations: [overlay],
+                canvas: canvas,
+                includeBackground: true
+            ))
+            let blended = try centerColor(overlayResult)
+            XCTAssertGreaterThan(blended.redComponent, 0.9)
+            XCTAssertEqual(blended.greenComponent, 0.5, accuracy: 0.12)
+
+            canvas.watermark = WatermarkConfiguration(
+                kind: .image,
+                text: "",
+                imageData: redData,
+                opacity: 1,
+                placement: .center,
+                sizePercent: 30,
+                textColor: .white
+            )
+            let watermarkResult = try ExportRenderer.render(RenderRequest(
+                image: base,
+                annotations: [],
+                canvas: canvas,
+                includeBackground: true
+            ))
+            let watermarked = try centerColor(watermarkResult)
+            XCTAssertGreaterThan(watermarked.redComponent, 0.9)
+            XCTAssertLessThan(watermarked.greenComponent, 0.1)
+
+            canvas.watermark = WatermarkConfiguration(
+                kind: .text,
+                text: "CONFIDENTIAL",
+                imageData: nil,
+                opacity: 1,
+                placement: .center,
+                sizePercent: 40,
+                textColor: RGBAColor(.black)
+            )
+            let textResult = try ExportRenderer.render(RenderRequest(
+                image: base,
+                annotations: [],
+                canvas: canvas,
+                includeBackground: true
+            ))
+            let darkTextPixels = try matchingPixelCount(textResult) {
+                $0.redComponent < 0.7 && $0.greenComponent < 0.7 && $0.blueComponent < 0.7
+            }
+            XCTAssertGreaterThan(darkTextPixels, 20)
+
+            canvas.watermark = WatermarkConfiguration(
+                kind: .image,
+                text: "",
+                imageData: redData,
+                opacity: 1,
+                placement: .tiled,
+                sizePercent: 10,
+                textColor: .white
+            )
+            let tiledResult = try ExportRenderer.render(RenderRequest(
+                image: base,
+                annotations: [],
+                canvas: canvas,
+                includeBackground: true
+            ))
+            let tiledRedPixels = try matchingPixelCount(tiledResult) {
+                $0.redComponent > 0.9 && $0.greenComponent < 0.1 && $0.blueComponent < 0.1
+            }
+            XCTAssertGreaterThan(tiledRedPixels, 250)
+            XCTAssertEqual(WatermarkPlacement.allCases.count, 10)
+        }
     }
 
     func testCropUndoRestoresOriginalBitmap() async {

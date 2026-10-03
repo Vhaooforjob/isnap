@@ -23,7 +23,7 @@ struct CanvasSettingsPanel: View {
                         HStack(spacing: 7) {
                             ForEach(settings.value.backgroundImages, id: \.self) { url in
                                 Button {
-                                    document.updateCanvas { $0.backgroundImageURL = url }
+                                    updateCanvas { $0.backgroundImageURL = url }
                                 } label: {
                                     Group {
                                         if let image = NSImage(contentsOf: url) {
@@ -48,13 +48,13 @@ struct CanvasSettingsPanel: View {
                     Button("Add Image…", systemImage: "photo.badge.plus", action: addBackground)
                         .disabled(settings.value.backgroundImages.count >= 8)
                     if document.canvas.backgroundImageURL != nil {
-                        Button("Use Gradient") { document.updateCanvas { $0.backgroundImageURL = nil } }
+                        Button("Use Gradient") { updateCanvas { $0.backgroundImageURL = nil } }
                     }
                 }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 34))], spacing: 8) {
                     ForEach(GradientPreset.presets) { preset in
                         Button {
-                            document.updateCanvas {
+                            updateCanvas {
                                 $0.gradient = preset
                                 $0.backgroundImageURL = nil
                             }
@@ -70,6 +70,61 @@ struct CanvasSettingsPanel: View {
                         }
                         .buttonStyle(.plain)
                         .help(preset.name)
+                    }
+                }
+            }
+            Section("Watermark") {
+                Toggle("Show watermark", isOn: watermarkEnabledBinding)
+                if document.canvas.watermark != nil {
+                    Picker("Type", selection: watermarkBinding(\.kind)) {
+                        Text("Text").tag(WatermarkContentKind.text)
+                        Text("Image").tag(WatermarkContentKind.image)
+                    }
+                    .pickerStyle(.segmented)
+
+                    if document.canvas.watermark?.kind == .text {
+                        TextField("Watermark text", text: watermarkBinding(\.text))
+                        ColorPicker("Text color", selection: watermarkColorBinding, supportsOpacity: true)
+                    } else {
+                        if let data = document.canvas.watermark?.imageData,
+                           let image = NSImage(data: data) {
+                            HStack {
+                                Image(nsImage: image)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 88, height: 54)
+                                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 7))
+                                Spacer()
+                                Button("Remove", role: .destructive) {
+                                    updateCanvas { $0.watermark?.imageData = nil }
+                                }
+                            }
+                        }
+                        Button("Choose Watermark Image…", systemImage: "photo.badge.plus", action: chooseWatermarkImage)
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack {
+                            Text("Opacity")
+                            Spacer()
+                            Text("\(Int(watermarkBinding(\.opacity).wrappedValue * 100))%")
+                                .foregroundStyle(.secondary).monospacedDigit()
+                        }
+                        Slider(value: watermarkBinding(\.opacity), in: 0.05...1)
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack {
+                            Text("Size")
+                            Spacer()
+                            Text("\(Int(watermarkBinding(\.sizePercent).wrappedValue))%")
+                                .foregroundStyle(.secondary).monospacedDigit()
+                        }
+                        Slider(value: watermarkBinding(\.sizePercent), in: 5...50, step: 1)
+                    }
+                    Picker("Position", selection: watermarkBinding(\.placement)) {
+                        ForEach(WatermarkPlacement.allCases) { placement in
+                            Text(placement.title).tag(placement)
+                        }
                     }
                 }
             }
@@ -91,15 +146,57 @@ struct CanvasSettingsPanel: View {
     private func binding<T>(_ keyPath: WritableKeyPath<CanvasConfiguration, T>) -> Binding<T> {
         Binding(
             get: { document.canvas[keyPath: keyPath] },
-            set: { value in document.updateCanvas { $0[keyPath: keyPath] = value } }
+            set: { value in updateCanvas { $0[keyPath: keyPath] = value } }
         )
     }
 
     private func colorBinding(_ keyPath: WritableKeyPath<CanvasConfiguration, RGBAColor>) -> Binding<Color> {
         Binding(
             get: { Color(nsColor: document.canvas[keyPath: keyPath].nsColor) },
-            set: { color in document.updateCanvas { $0[keyPath: keyPath] = RGBAColor(NSColor(color)) } }
+            set: { color in updateCanvas { $0[keyPath: keyPath] = RGBAColor(NSColor(color)) } }
         )
+    }
+
+    private var watermarkEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { document.canvas.watermark != nil },
+            set: { enabled in
+                updateCanvas { canvas in
+                    canvas.watermark = enabled ? (canvas.watermark ?? WatermarkConfiguration()) : nil
+                }
+            }
+        )
+    }
+
+    private func watermarkBinding<T>(_ keyPath: WritableKeyPath<WatermarkConfiguration, T>) -> Binding<T> {
+        Binding(
+            get: { (document.canvas.watermark ?? WatermarkConfiguration())[keyPath: keyPath] },
+            set: { value in
+                updateCanvas { canvas in
+                    var watermark = canvas.watermark ?? WatermarkConfiguration()
+                    watermark[keyPath: keyPath] = value
+                    canvas.watermark = watermark
+                }
+            }
+        )
+    }
+
+    private var watermarkColorBinding: Binding<Color> {
+        Binding(
+            get: { Color(nsColor: (document.canvas.watermark ?? WatermarkConfiguration()).textColor.nsColor) },
+            set: { color in
+                updateCanvas { canvas in
+                    var watermark = canvas.watermark ?? WatermarkConfiguration()
+                    watermark.textColor = RGBAColor(NSColor(color))
+                    canvas.watermark = watermark
+                }
+            }
+        )
+    }
+
+    private func updateCanvas(_ mutation: (inout CanvasConfiguration) -> Void) {
+        document.updateCanvas(mutation)
+        settings.value.canvas = document.canvas
     }
 
     private func addBackground() {
@@ -109,7 +206,25 @@ struct CanvasSettingsPanel: View {
         do {
             let imported = try BackgroundImageStore.importImage(from: url)
             settings.value.backgroundImages.append(imported)
-            document.updateCanvas { $0.backgroundImageURL = imported }
+            updateCanvas { $0.backgroundImageURL = imported }
+        } catch {
+            NSSound.beep()
+        }
+    }
+
+    private func chooseWatermarkImage() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.png, .jpeg, .heic, .tiff]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let data = try BackgroundImageStore.portableImageData(from: url, maxDimension: 1024)
+            updateCanvas { canvas in
+                var watermark = canvas.watermark ?? WatermarkConfiguration()
+                watermark.kind = .image
+                watermark.imageData = data
+                canvas.watermark = watermark
+            }
         } catch {
             NSSound.beep()
         }
@@ -119,7 +234,7 @@ struct CanvasSettingsPanel: View {
         try? BackgroundImageStore.remove(url)
         settings.value.backgroundImages.removeAll { $0 == url }
         if document.canvas.backgroundImageURL == url {
-            document.updateCanvas { $0.backgroundImageURL = nil }
+            updateCanvas { $0.backgroundImageURL = nil }
         }
     }
 }

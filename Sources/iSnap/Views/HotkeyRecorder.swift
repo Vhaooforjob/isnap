@@ -98,3 +98,71 @@ final class ShortcutRecorderView: NSControl {
     }
 }
 
+struct EditorKeyboardShortcut {
+    let key: KeyEquivalent
+    let modifiers: EventModifiers
+
+    static func parse(_ value: String) -> EditorKeyboardShortcut? {
+        var modifiers: EventModifiers = []
+        if value.contains("⌘") || value.localizedCaseInsensitiveContains("cmd") {
+            modifiers.insert(.command)
+        }
+        if value.contains("⌃") || value.localizedCaseInsensitiveContains("ctrl") ||
+            value.localizedCaseInsensitiveContains("control") {
+            modifiers.insert(.control)
+        }
+        if value.contains("⌥") || value.localizedCaseInsensitiveContains("option") ||
+            value.localizedCaseInsensitiveContains("alt") {
+            modifiers.insert(.option)
+        }
+        if value.contains("⇧") || value.localizedCaseInsensitiveContains("shift") {
+            modifiers.insert(.shift)
+        }
+
+        var token = value
+        for modifier in ["⌘", "⌃", "⌥", "⇧", "command", "cmd", "control", "ctrl", "option", "alt", "shift"] {
+            token = token.replacingOccurrences(of: modifier, with: "", options: .caseInsensitive)
+        }
+        token = token.components(separatedBy: .whitespacesAndNewlines).joined().uppercased()
+        while token.hasPrefix("+"), token.count > 1 { token.removeFirst() }
+
+        let character: Character?
+        if token == "SPACE" {
+            character = " "
+        } else if let functionKey = functionKeys[token] {
+            character = functionKey
+        } else if token.count == 1, let first = token.lowercased().first {
+            character = first
+        } else {
+            character = nil
+        }
+        guard let character else { return nil }
+        return EditorKeyboardShortcut(key: KeyEquivalent(character), modifiers: modifiers)
+    }
+
+    private static let functionKeys: [String: Character] = [
+        "F1": Character(UnicodeScalar(0xF704)!),
+        "F2": Character(UnicodeScalar(0xF705)!),
+        "F3": Character(UnicodeScalar(0xF706)!),
+        "F4": Character(UnicodeScalar(0xF707)!),
+        "F5": Character(UnicodeScalar(0xF708)!),
+        "F6": Character(UnicodeScalar(0xF709)!),
+        "F7": Character(UnicodeScalar(0xF70A)!),
+        "F8": Character(UnicodeScalar(0xF70B)!),
+        "F9": Character(UnicodeScalar(0xF70C)!),
+        "F10": Character(UnicodeScalar(0xF70D)!),
+        "F11": Character(UnicodeScalar(0xF70E)!),
+        "F12": Character(UnicodeScalar(0xF70F)!)
+    ]
+}
+
+extension View {
+    @ViewBuilder
+    func editorKeyboardShortcut(_ shortcut: EditorKeyboardShortcut?) -> some View {
+        if let shortcut {
+            keyboardShortcut(shortcut.key, modifiers: shortcut.modifiers)
+        } else {
+            self
+        }
+    }
+}

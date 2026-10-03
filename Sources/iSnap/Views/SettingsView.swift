@@ -69,17 +69,27 @@ struct SettingsView: View {
     }
 
     private var hotkeys: some View {
-        Section("Global shortcuts") {
-            LabeledContent("All displays") {
-                HotkeyRecorder(shortcut: setting(\.hotkeys.fullScreen))
+        Group {
+            Section("Global capture shortcuts") {
+                LabeledContent("All displays") {
+                    HotkeyRecorder(shortcut: setting(\.hotkeys.fullScreen))
+                }
+                LabeledContent("Region") {
+                    HotkeyRecorder(shortcut: setting(\.hotkeys.region))
+                }
+                LabeledContent("Window") {
+                    HotkeyRecorder(shortcut: setting(\.hotkeys.window))
+                }
             }
-            LabeledContent("Region") {
-                HotkeyRecorder(shortcut: setting(\.hotkeys.region))
+            Section("Editor shortcuts") {
+                LabeledContent("Save edited image") {
+                    HotkeyRecorder(shortcut: setting(\.hotkeys.saveEditedImage))
+                }
+                LabeledContent("Copy edited image") {
+                    HotkeyRecorder(shortcut: setting(\.hotkeys.copyEditedImage))
+                }
             }
-            LabeledContent("Window") {
-                HotkeyRecorder(shortcut: setting(\.hotkeys.window))
-            }
-            Text("Click a shortcut, then press a modifier combination and a letter, number, or F1–F12. Press Escape to cancel.")
+            Text("Click a shortcut, then press a modifier combination and a letter, number, or F1–F12. Editor shortcuts work while iSnap is active. Press Escape to cancel.")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }

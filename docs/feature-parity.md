@@ -12,6 +12,8 @@ This document records the translation from the public WinShot repository (review
 | Rectangle, ellipse, arrow, line, text | CoreGraphics/CoreText renderer with directional endpoints and inline text editing | Implemented |
 | Editor preview | Fit, zoom in/out, trackpad pinch, and pan while zoomed | Implemented |
 | Number/letter and spotlight tools | Editable auto-sequenced numeric/alphabetic marker plus even-odd dim overlay | Implemented |
+| Image overlay | Embedded PNG annotation with move, resize, rotate, opacity, undo/redo | Implemented |
+| Text/image watermark | Persistent canvas configuration with anchored and tiled placement | Implemented |
 | Transform tools | AppKit hit testing, move/resize, rotation inspector | Implemented |
 | Undo / redo | Snapshot history in `EditorDocument` | Implemented |
 | Non-destructive crop | Original-image snapshot plus annotation translation | Implemented |
@@ -20,7 +22,7 @@ This document records the translation from the public WinShot repository (review
 | Output ratio presets | Renderer geometry for all 9 presets | Implemented |
 | PNG/JPEG and quality | `NSBitmapImageRep` | Implemented |
 | Quick save and naming | Application settings + atomic file writes | Implemented |
-| Clipboard open/copy | `NSPasteboard` | Implemented |
+| Clipboard open/copy | `NSPasteboard`, editor toolbar button, and configurable app shortcut | Implemented |
 | Screenshot library | SwiftUI grid over configured save directory | Implemented |
 | Capture-to-editor flow | Main window restoration and foreground activation after every capture | Implemented |
 | Automatic capture history | Lossless PNG archive into configured Library folder | Implemented |

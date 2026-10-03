@@ -143,20 +143,30 @@ private struct WindowAccessor: NSViewRepresentable {
 
 private struct iSnapCommands: Commands {
     let model: AppModel
+    @ObservedObject private var settings: SettingsStore
+
+    init(model: AppModel) {
+        self.model = model
+        _settings = ObservedObject(wrappedValue: model.settings)
+    }
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
             Button("Open Image…", action: model.openImage).keyboardShortcut("o")
             Button("Paste Image", action: model.pasteImage).keyboardShortcut("v")
+            Button("Insert Image Overlay…", action: model.insertOverlayImage)
+                .disabled(model.document.image == nil)
         }
         CommandGroup(replacing: .saveItem) {
-            Button("Quick Save", action: model.quickSave).keyboardShortcut("s")
+            Button("Save Edited Image", action: model.quickSave)
+                .editorKeyboardShortcut(EditorKeyboardShortcut.parse(settings.value.hotkeys.saveEditedImage))
                 .disabled(model.document.image == nil)
             Button("Export…", action: model.saveAs).keyboardShortcut("s", modifiers: [.command, .shift])
                 .disabled(model.document.image == nil)
         }
         CommandGroup(after: .pasteboard) {
-            Button("Copy Rendered Image", action: model.copy).keyboardShortcut("c")
+            Button("Copy Edited Image", action: model.copy)
+                .editorKeyboardShortcut(EditorKeyboardShortcut.parse(settings.value.hotkeys.copyEditedImage))
                 .disabled(model.document.image == nil)
         }
         CommandGroup(after: .undoRedo) {

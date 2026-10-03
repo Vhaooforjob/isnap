@@ -24,7 +24,7 @@ enum CaptureMode: String, CaseIterable, Identifiable, Codable {
 }
 
 enum EditorTool: String, CaseIterable, Identifiable, Codable {
-    case select, crop, rectangle, ellipse, arrow, line, text, spotlight, number
+    case select, crop, rectangle, ellipse, arrow, line, text, spotlight, number, image
 
     var id: String { rawValue }
     var title: String { rawValue.capitalized }
@@ -39,6 +39,36 @@ enum EditorTool: String, CaseIterable, Identifiable, Codable {
         case .text: "textformat"
         case .spotlight: "lightbulb"
         case .number: "number.circle"
+        case .image: "photo.on.rectangle"
+        }
+    }
+}
+
+enum WatermarkContentKind: String, CaseIterable, Identifiable, Codable {
+    case text, image
+    var id: String { rawValue }
+}
+
+enum WatermarkPlacement: String, CaseIterable, Identifiable, Codable {
+    case topLeft, top, topRight
+    case left, center, right
+    case bottomLeft, bottom, bottomRight
+    case tiled
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .topLeft: "Top Left"
+        case .top: "Top"
+        case .topRight: "Top Right"
+        case .left: "Left"
+        case .center: "Center"
+        case .right: "Right"
+        case .bottomLeft: "Bottom Left"
+        case .bottom: "Bottom"
+        case .bottomRight: "Bottom Right"
+        case .tiled: "Tile Entire Image"
         }
     }
 }
@@ -178,4 +208,3 @@ extension NSColor {
         )
     }
 }
-

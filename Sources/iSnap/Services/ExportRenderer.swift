@@ -131,6 +131,7 @@ enum ExportRenderer {
             sourceSize: sourceSize,
             destination: imageRect
         )
+        WatermarkRenderer.draw(request.canvas.watermark, in: context, bounds: CGRect(origin: .zero, size: outputSize))
         guard let result = context.makeImage() else { throw ExportError.invalidImage }
         return NSImage(cgImage: result, size: outputSize)
     }
@@ -223,6 +224,13 @@ private enum AnnotationRenderer {
                     textAlignment: .center
                 )
                 drawText(label, frame: frame, context: context, scale: min(scaleX, scaleY))
+            case .image:
+                if let data = annotation.imageData,
+                   let image = NSImage(data: data)?.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+                    context.setAlpha(annotation.effectiveImageOpacity)
+                    context.interpolationQuality = .high
+                    context.draw(image, in: frame)
+                }
             case .select, .crop, .spotlight:
                 break
             }
@@ -275,6 +283,126 @@ private enum AnnotationRenderer {
         let y = frame.midY - bounds.height / 2 - bounds.minY
         context.textPosition = CGPoint(x: x, y: y)
         CTLineDraw(line, context)
+    }
+}
+
+private enum WatermarkRenderer {
+    static func draw(_ watermark: WatermarkConfiguration?, in context: CGContext, bounds: CGRect) {
+        guard let watermark,
+              watermark.opacity > 0,
+              let stampSize = stampSize(for: watermark, bounds: bounds) else { return }
+
+        if watermark.placement == .tiled {
+            drawTiled(watermark, stampSize: stampSize, in: context, bounds: bounds)
+        } else {
+            drawStamp(watermark, in: placementRect(watermark.placement, stampSize: stampSize, bounds: bounds), context: context)
+        }
+    }
+
+    private static func stampSize(for watermark: WatermarkConfiguration, bounds: CGRect) -> CGSize? {
+        switch watermark.kind {
+        case .text:
+            guard !watermark.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+            let baseFontSize = max(14, min(bounds.width, bounds.height) * watermark.sizePercent.clamped(to: 5...50) / 100 * 0.35)
+            let line = textLine(watermark, fontSize: baseFontSize)
+            let lineBounds = CTLineGetBoundsWithOptions(line, [.useGlyphPathBounds])
+            let maxWidth = bounds.width * 0.7
+            let scale = lineBounds.width > maxWidth ? maxWidth / lineBounds.width : 1
+            return CGSize(width: ceil(lineBounds.width * scale), height: ceil(lineBounds.height * scale))
+        case .image:
+            guard let data = watermark.imageData,
+                  let image = NSImage(data: data)?.cgImage(forProposedRect: nil, context: nil, hints: nil),
+                  image.width > 0, image.height > 0 else { return nil }
+            let targetWidth = bounds.width * watermark.sizePercent.clamped(to: 5...50) / 100
+            var size = CGSize(width: targetWidth, height: targetWidth * CGFloat(image.height) / CGFloat(image.width))
+            if size.height > bounds.height * 0.5 {
+                let scale = bounds.height * 0.5 / size.height
+                size.width *= scale
+                size.height *= scale
+            }
+            return size
+        }
+    }
+
+    private static func placementRect(_ placement: WatermarkPlacement, stampSize: CGSize, bounds: CGRect) -> CGRect {
+        let margin = max(12, min(bounds.width, bounds.height) * 0.025)
+        let left = bounds.minX + margin
+        let centerX = bounds.midX - stampSize.width / 2
+        let right = bounds.maxX - margin - stampSize.width
+        let bottom = bounds.minY + margin
+        let centerY = bounds.midY - stampSize.height / 2
+        let top = bounds.maxY - margin - stampSize.height
+
+        let origin: CGPoint = switch placement {
+        case .topLeft: CGPoint(x: left, y: top)
+        case .top: CGPoint(x: centerX, y: top)
+        case .topRight: CGPoint(x: right, y: top)
+        case .left: CGPoint(x: left, y: centerY)
+        case .center: CGPoint(x: centerX, y: centerY)
+        case .right: CGPoint(x: right, y: centerY)
+        case .bottomLeft: CGPoint(x: left, y: bottom)
+        case .bottom: CGPoint(x: centerX, y: bottom)
+        case .bottomRight: CGPoint(x: right, y: bottom)
+        case .tiled: CGPoint(x: left, y: bottom)
+        }
+        return CGRect(origin: origin, size: stampSize)
+    }
+
+    private static func drawTiled(
+        _ watermark: WatermarkConfiguration,
+        stampSize: CGSize,
+        in context: CGContext,
+        bounds: CGRect
+    ) {
+        let gapX = max(36, stampSize.width * 0.65)
+        let gapY = max(32, stampSize.height * 1.4)
+        var row = 0
+        var y = bounds.minY + gapY / 2
+        while y < bounds.maxY {
+            var x = bounds.minX + gapX / 2 - (row.isMultiple(of: 2) ? 0 : (stampSize.width + gapX) / 2)
+            while x < bounds.maxX {
+                drawStamp(
+                    watermark,
+                    in: CGRect(x: x, y: y, width: stampSize.width, height: stampSize.height),
+                    context: context
+                )
+                x += stampSize.width + gapX
+            }
+            y += stampSize.height + gapY
+            row += 1
+        }
+    }
+
+    private static func drawStamp(_ watermark: WatermarkConfiguration, in rect: CGRect, context: CGContext) {
+        context.saveGState()
+        context.setAlpha(watermark.opacity.clamped(to: 0...1))
+        switch watermark.kind {
+        case .text:
+            let baseFontSize = max(14, rect.height / 0.8)
+            let line = textLine(watermark, fontSize: baseFontSize)
+            let lineBounds = CTLineGetBoundsWithOptions(line, [.useGlyphPathBounds])
+            let scale = min(1, rect.width / max(1, lineBounds.width), rect.height / max(1, lineBounds.height))
+            context.translateBy(x: rect.minX, y: rect.minY)
+            context.scaleBy(x: scale, y: scale)
+            context.setShadow(offset: CGSize(width: 0, height: -1), blur: 2, color: NSColor.black.withAlphaComponent(0.55).cgColor)
+            context.textPosition = CGPoint(x: -lineBounds.minX, y: -lineBounds.minY)
+            CTLineDraw(line, context)
+        case .image:
+            if let data = watermark.imageData,
+               let image = NSImage(data: data)?.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+                context.interpolationQuality = .high
+                context.draw(image, in: rect)
+            }
+        }
+        context.restoreGState()
+    }
+
+    private static func textLine(_ watermark: WatermarkConfiguration, fontSize: CGFloat) -> CTLine {
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: fontSize, weight: .semibold),
+            .foregroundColor: watermark.textColor.nsColor
+        ]
+        return CTLineCreateWithAttributedString(NSAttributedString(string: watermark.text, attributes: attributes))
     }
 }
 

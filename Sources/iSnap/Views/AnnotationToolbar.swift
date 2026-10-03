@@ -2,12 +2,13 @@ import AppKit
 import SwiftUI
 
 struct AnnotationToolbar: View {
+    @EnvironmentObject private var model: AppModel
     @ObservedObject var document: EditorDocument
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
-                ForEach(EditorTool.allCases) { tool in
+                ForEach(EditorTool.allCases.filter { $0 != .image }) { tool in
                     Button {
                         document.tool = tool
                         if tool != .select { document.selectedAnnotationID = nil }
@@ -33,6 +34,22 @@ struct AnnotationToolbar: View {
                     .help(selected.type == .text ? "Edit text" : "Edit marker style and value")
                 }
                 Divider().frame(height: 22)
+                Button(action: model.insertOverlayImage) {
+                    Label("Insert Image", systemImage: "photo.badge.plus")
+                }
+                .disabled(document.image == nil)
+                .help("Insert an image overlay")
+                Button(action: model.copy) {
+                    Label("Copy", systemImage: "doc.on.doc")
+                }
+                .disabled(document.image == nil)
+                .help("Copy edited image (\(model.settings.value.hotkeys.copyEditedImage))")
+                Button(action: model.quickSave) {
+                    Label("Save", systemImage: "square.and.arrow.down")
+                }
+                .disabled(document.image == nil)
+                .help("Save edited image (\(model.settings.value.hotkeys.saveEditedImage))")
+                Divider().frame(height: 22)
                 HStack(spacing: 3) {
                     Button(action: document.zoomPreviewOut) {
                         Image(systemName: "minus.magnifyingglass")
@@ -50,18 +67,29 @@ struct AnnotationToolbar: View {
                     .help("Zoom in")
                 }
                 Divider().frame(height: 22)
-                ColorPicker("Stroke", selection: strokeBinding, supportsOpacity: true)
-                    .labelsHidden().frame(width: 28)
-                if supportsFill {
-                    ColorPicker("Fill", selection: fillBinding, supportsOpacity: true)
+                if document.selectedAnnotation?.type == .image {
+                    HStack(spacing: 4) {
+                        Image(systemName: "circle.lefthalf.filled")
+                        Slider(value: imageOpacityBinding, in: 0.05...1).frame(width: 86)
+                        Text("\(Int(imageOpacityBinding.wrappedValue * 100))%")
+                            .monospacedDigit().frame(width: 34)
+                    }
+                    .font(.caption)
+                    .help("Overlay opacity")
+                } else {
+                    ColorPicker("Stroke", selection: strokeBinding, supportsOpacity: true)
                         .labelsHidden().frame(width: 28)
+                    if supportsFill {
+                        ColorPicker("Fill", selection: fillBinding, supportsOpacity: true)
+                            .labelsHidden().frame(width: 28)
+                    }
+                    HStack(spacing: 4) {
+                        Image(systemName: "lineweight")
+                        Slider(value: strokeWidthBinding, in: 1...20, step: 1).frame(width: 76)
+                        Text("\(Int(strokeWidthBinding.wrappedValue))").monospacedDigit().frame(width: 20)
+                    }
+                    .font(.caption)
                 }
-                HStack(spacing: 4) {
-                    Image(systemName: "lineweight")
-                    Slider(value: strokeWidthBinding, in: 1...20, step: 1).frame(width: 76)
-                    Text("\(Int(strokeWidthBinding.wrappedValue))").monospacedDigit().frame(width: 20)
-                }
-                .font(.caption)
                 if document.tool == .crop {
                     Picker("Ratio", selection: $document.cropAspectRatio) {
                         ForEach(CropAspectRatio.allCases) { Text($0.rawValue).tag($0) }
@@ -116,6 +144,17 @@ struct AnnotationToolbar: View {
         )
     }
 
+    private var imageOpacityBinding: Binding<Double> {
+        Binding(
+            get: { Double(document.selectedAnnotation?.effectiveImageOpacity ?? 1) },
+            set: { value in
+                guard var item = document.selectedAnnotation, item.type == .image else { return }
+                item.imageOpacity = value
+                document.update(item, checkpoint: true)
+            }
+        )
+    }
+
     private func rotationBinding(_ annotation: Annotation) -> Binding<Double> {
         Binding(
             get: { Double(document.selectedAnnotation?.rotation ?? annotation.rotation) },
@@ -150,6 +189,7 @@ struct AnnotationToolbar: View {
         case .text: "T"
         case .spotlight: "S"
         case .number: "N"
+        case .image: "—"
         }
     }
 }
