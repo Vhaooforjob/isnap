@@ -27,9 +27,26 @@ targets:
         INFOPLIST_FILE: Sources/iSnap/Resources/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_ENTITLEMENTS: Sources/iSnap/Resources/iSnap.entitlements
+    dependencies:
+      - target: iSnapWidget
+        embed: true
     scheme:
       testTargets:
         - iSnapTests
+  iSnapWidget:
+    type: app-extension
+    platform: macOS
+    sources:
+      - Sources/iSnapWidget
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.isnap.app.widget
+        PRODUCT_NAME: iSnapWidget
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Sources/iSnapWidget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Sources/iSnapWidget/iSnapWidget.entitlements
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
   iSnapTests:
     type: bundle.unit-test
     platform: macOS

@@ -33,11 +33,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         didSet {
             model?.presentMainWindow = { [weak self] in self?.showApp() }
             applyStartupVisibilityIfNeeded()
+            let links = pendingDeepLinks
+            pendingDeepLinks.removeAll()
+            links.forEach(handleDeepLink)
         }
     }
     private var statusItem: NSStatusItem?
     private var mainWindow: NSWindow?
     private var appliedStartupVisibility = false
+    private var pendingDeepLinks: [URL] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         buildStatusItem()
@@ -49,6 +53,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if !flag { sender.windows.first?.makeKeyAndOrderFront(nil) }
         sender.activate(ignoringOtherApps: true)
         return true
+    }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls where url.scheme == "isnap" {
+            if model == nil {
+                pendingDeepLinks.append(url)
+            } else {
+                handleDeepLink(url)
+            }
+        }
     }
 
     private func buildStatusItem() {
@@ -107,6 +121,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func showSettings() {
         showApp()
         model?.isShowingSettings = true
+    }
+
+    private func handleDeepLink(_ url: URL) {
+        guard let model else { return }
+        showApp()
+        switch url.host {
+        case "editor":
+            model.section = .editor
+        case "library":
+            model.section = .library
+            Task { await model.reloadLibrary() }
+        case "open", "trash":
+            let name = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?
+                .first(where: { $0.name == "name" })?
+                .value
+            guard let name else { return }
+            Task {
+                await model.reloadLibrary()
+                guard let item = model.libraryItems.first(where: { $0.name == name }) else { return }
+                if url.host == "open" {
+                    model.openLibraryItem(item)
+                } else {
+                    await model.deleteLibraryItem(item)
+                    model.section = .library
+                }
+            }
+        default:
+            break
+        }
     }
 
     private func applyStartupVisibilityIfNeeded() {

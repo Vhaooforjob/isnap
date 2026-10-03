@@ -20,7 +20,8 @@ let package = Package(
                 .linkedFramework("Network"),
                 .linkedFramework("ScreenCaptureKit"),
                 .linkedFramework("Security"),
-                .linkedFramework("ServiceManagement")
+                .linkedFramework("ServiceManagement"),
+                .linkedFramework("WidgetKit")
             ]
         ),
         .testTarget(

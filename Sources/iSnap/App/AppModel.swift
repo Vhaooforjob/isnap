@@ -239,6 +239,7 @@ final class AppModel: ObservableObject {
         do {
             try FileManager.default.createDirectory(at: settings.value.quickSave.folder, withIntermediateDirectories: true)
             libraryItems = try await libraryService.items(in: settings.value.quickSave.folder)
+            WidgetSnapshotService.publish(libraryItems)
         } catch { report(error) }
     }
 

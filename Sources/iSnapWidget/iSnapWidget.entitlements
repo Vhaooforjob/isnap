@@ -3,12 +3,14 @@
 <plist version="1.0">
 <dict>
     <key>com.apple.security.app-sandbox</key>
-    <false/>
-    <key>com.apple.security.network.client</key>
     <true/>
     <key>com.apple.security.application-groups</key>
     <array>
         <string>group.dev.isnap.app</string>
+    </array>
+    <key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
+    <array>
+        <string>/Library/Application Support/iSnap/Widget/</string>
     </array>
 </dict>
 </plist>
