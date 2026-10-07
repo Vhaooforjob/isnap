@@ -1,4 +1,3 @@
-import AppKit
 import Foundation
 
 actor LibraryService {
@@ -13,10 +12,13 @@ actor LibraryService {
             guard ["png", "jpg", "jpeg"].contains(url.pathExtension.lowercased()),
                   let values = try? url.resourceValues(forKeys: keys),
                   values.isRegularFile == true,
-                  let image = NSImage(contentsOf: url) else { return nil }
-            let dimensions = image.representations.first.map { CGSize(width: $0.pixelsWide, height: $0.pixelsHigh) } ?? image.size
+                  let dimensions = ImageIOService.pixelSize(at: url) else { return nil }
             return LibraryItem(url: url, modifiedAt: values.contentModificationDate ?? .distantPast, dimensions: dimensions)
         }.sorted { $0.modifiedAt > $1.modifiedAt }
+    }
+
+    func publishWidgetSnapshot(_ items: [LibraryItem]) {
+        WidgetSnapshotService.publish(items)
     }
 
     func delete(_ item: LibraryItem, rootFolder: URL) throws {

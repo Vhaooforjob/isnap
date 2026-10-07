@@ -22,6 +22,10 @@ final class AppModel: ObservableObject {
     @Published var libraryItems: [LibraryItem] = []
     @Published var releaseInfo: ReleaseInfo?
     @Published var isUploading = false
+    @Published var isParsingScreenshot = false
+    @Published var isShowingParsedData = false
+    @Published var recognizedText = ""
+    @Published var recognizedSourceName = "Screenshot"
     @Published var r2Connected = false
     @Published var googleDriveConnected = false
 
@@ -36,8 +40,10 @@ final class AppModel: ObservableObject {
     private let updateService = UpdateService()
     private let r2Uploader = R2Uploader()
     private let googleDriveUploader = GoogleDriveUploader()
+    private let screenshotParser = ScreenshotParserService()
     private let hotkeys = GlobalHotkeyService()
     private var cancellables: Set<AnyCancellable> = []
+    private var widgetPublishTask: Task<Void, Never>?
 
     init() {
         document.canvas = settings.value.canvas
@@ -144,6 +150,33 @@ final class AppModel: ObservableObject {
         accept(CaptureResult(image: image, sourceName: "Clipboard"))
     }
 
+    func parseScreenshot() async {
+        guard !isParsingScreenshot, let image = document.image,
+              let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            if document.image == nil { errorMessage = "Capture or open an image before extracting text." }
+            return
+        }
+        isParsingScreenshot = true
+        statusText = "Extracting text with macOS Vision…"
+        defer { isParsingScreenshot = false }
+
+        do {
+            let result = try await screenshotParser.parse(cgImage)
+            guard document.image === image else { return }
+            recognizedText = result.text
+            recognizedSourceName = document.sourceName
+            isShowingParsedData = true
+            statusText = result.lineCount == 0
+                ? "No text detected"
+                : "Extracted \(result.lineCount) text \(result.lineCount == 1 ? "line" : "lines")"
+            presentMainWindow?()
+        } catch is CancellationError {
+            statusText = "Text extraction cancelled"
+        } catch {
+            report(error)
+        }
+    }
+
     func insertOverlayImage() {
         guard document.image != nil else {
             errorMessage = "Capture or open an image before inserting an overlay."
@@ -238,8 +271,13 @@ final class AppModel: ObservableObject {
     func reloadLibrary() async {
         do {
             try FileManager.default.createDirectory(at: settings.value.quickSave.folder, withIntermediateDirectories: true)
-            libraryItems = try await libraryService.items(in: settings.value.quickSave.folder)
-            WidgetSnapshotService.publish(libraryItems)
+            let items = try await libraryService.items(in: settings.value.quickSave.folder)
+            libraryItems = items
+            widgetPublishTask?.cancel()
+            widgetPublishTask = Task(priority: .utility) { [libraryService] in
+                guard !Task.isCancelled else { return }
+                await libraryService.publishWidgetSnapshot(items)
+            }
         } catch { report(error) }
     }
 
@@ -364,6 +402,8 @@ final class AppModel: ObservableObject {
 
     private func accept(_ result: CaptureResult) {
         document.load(result)
+        recognizedText = ""
+        isShowingParsedData = false
         document.canvas = settings.value.canvas
         section = .editor
         statusText = "\(Int(document.imagePixelSize.width)) × \(Int(document.imagePixelSize.height)) px"

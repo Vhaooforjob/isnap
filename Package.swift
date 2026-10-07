@@ -17,10 +17,12 @@ let package = Package(
                 .linkedFramework("Carbon"),
                 .linkedFramework("CoreGraphics"),
                 .linkedFramework("CryptoKit"),
+                .linkedFramework("ImageIO"),
                 .linkedFramework("Network"),
                 .linkedFramework("ScreenCaptureKit"),
                 .linkedFramework("Security"),
                 .linkedFramework("ServiceManagement"),
+                .linkedFramework("Vision"),
                 .linkedFramework("WidgetKit")
             ]
         ),

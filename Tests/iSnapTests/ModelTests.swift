@@ -404,4 +404,61 @@ final class ModelTests: XCTestCase {
             XCTAssertEqual(saved.pixelsHigh, 80)
         }
     }
+
+    func testImageIOReadsMetadataAndCreatesBoundedThumbnail() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("iSnap-thumbnail-\(UUID().uuidString).png")
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        guard let context = CGContext(
+            data: nil,
+            width: 1_200,
+            height: 800,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ), let image = context.makeImage(),
+        let data = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) else {
+            return XCTFail("Could not create thumbnail fixture")
+        }
+        try data.write(to: url, options: .atomic)
+
+        XCTAssertEqual(ImageIOService.pixelSize(at: url), CGSize(width: 1_200, height: 800))
+        let thumbnail = try XCTUnwrap(ImageIOService.thumbnail(at: url, maxPixelSize: 240))
+        XCTAssertEqual(max(thumbnail.width, thumbnail.height), 240)
+        XCTAssertLessThanOrEqual(thumbnail.width, 240)
+        XCTAssertLessThanOrEqual(thumbnail.height, 240)
+    }
+
+    func testScreenshotParserRecognizesRenderedText() async throws {
+        guard let context = CGContext(
+            data: nil,
+            width: 900,
+            height: 220,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return XCTFail("Could not create OCR fixture") }
+        context.setFillColor(NSColor.white.cgColor)
+        context.fill(CGRect(x: 0, y: 0, width: 900, height: 220))
+        context.textMatrix = .identity
+        let line = CTLineCreateWithAttributedString(NSAttributedString(
+            string: "Screenshot Việt Nam 123",
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 76, weight: .bold),
+                .foregroundColor: NSColor.black
+            ]
+        ))
+        context.textPosition = CGPoint(x: 45, y: 75)
+        CTLineDraw(line, context)
+        let image = try XCTUnwrap(context.makeImage())
+
+        let result = try await ScreenshotParserService().parse(image)
+        XCTAssertTrue(result.text.localizedCaseInsensitiveContains("Screenshot"), result.text)
+        XCTAssertTrue(result.text.localizedCaseInsensitiveContains("Việt Nam"), result.text)
+        XCTAssertTrue(result.text.contains("123"), result.text)
+        XCTAssertGreaterThan(result.lineCount, 0)
+    }
 }

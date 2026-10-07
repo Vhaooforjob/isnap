@@ -230,6 +230,9 @@ private struct iSnapCommands: Commands {
             Button("All Displays") { Task { await model.capture(.fullScreen) } }
             Button("Region") { Task { await model.capture(.region) } }
             Button("Window") { Task { await model.capture(.window) } }
+            Divider()
+            Button("Extract Text from Screenshot") { Task { await model.parseScreenshot() } }
+                .disabled(model.document.image == nil || model.isParsingScreenshot)
         }
     }
 }

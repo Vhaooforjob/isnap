@@ -27,6 +27,9 @@ struct ContentView: View {
         .sheet(isPresented: $model.isShowingWindowPicker) {
             WindowPickerView().environmentObject(model)
         }
+        .sheet(isPresented: $model.isShowingParsedData) {
+            ScreenshotParseView(text: $model.recognizedText, sourceName: model.recognizedSourceName)
+        }
         .alert("iSnap", isPresented: Binding(
             get: { model.errorMessage != nil },
             set: { if !$0 { model.errorMessage = nil } }
@@ -52,7 +55,7 @@ struct ContentView: View {
 
     private var statusBar: some View {
         HStack {
-            Circle().fill(model.isCapturing ? Color.orange : Color.green).frame(width: 7, height: 7)
+            Circle().fill(model.isCapturing || model.isParsingScreenshot ? Color.orange : Color.green).frame(width: 7, height: 7)
             Text(model.statusText)
             Spacer()
             if model.document.image != nil {
@@ -172,16 +175,8 @@ private struct RecentLibraryItem: View {
     }
 
     private var thumbnail: some View {
-        Group {
-            if let image = NSImage(contentsOf: item.url) {
-                Image(nsImage: image)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                Image(systemName: "photo")
-                    .foregroundStyle(.secondary)
-            }
-        }
+        LibraryThumbnail(item: item, maxPixelSize: 96)
+        .scaledToFill()
         .frame(width: 30, height: 24)
         .background(Color.black.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 4))

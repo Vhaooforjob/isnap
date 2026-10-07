@@ -73,13 +73,7 @@ private struct LibraryCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Group {
-                if let image = NSImage(contentsOf: item.url) {
-                    Image(nsImage: image).resizable().scaledToFit()
-                } else {
-                    Image(systemName: "photo.badge.exclamationmark").font(.largeTitle)
-                }
-            }
+            LibraryThumbnail(item: item, maxPixelSize: 520, placeholder: "photo.badge.exclamationmark")
             .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 160)
             .background(Color.black.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
             Text(item.name).font(.callout.weight(.medium)).lineLimit(1)

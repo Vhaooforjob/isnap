@@ -51,19 +51,8 @@ actor CaptureService {
         let content = try await shareableContent(excludingDesktopWindows: false, onScreenWindowsOnly: true)
         guard !content.displays.isEmpty else { throw CaptureError.displayUnavailable }
 
-        let captures = try await content.displays.asyncMap { display -> (SCDisplay, CGImage) in
-            let filter = SCContentFilter(display: display, excludingWindows: [])
-            let configuration = SCStreamConfiguration()
-            configuration.width = Int(CGFloat(display.width) * displayScale(for: display.frame))
-            configuration.height = Int(CGFloat(display.height) * displayScale(for: display.frame))
-            configuration.showsCursor = false
-            configuration.captureResolution = .best
-            let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration)
-            return (display, image)
-        }
-
-        let union = captures.map { $0.0.frame }.reduce(CGRect.null) { $0.union($1) }
-        let scale = captures.map { displayScale(for: $0.0.frame) }.max() ?? 1
+        let union = content.displays.map(\.frame).reduce(CGRect.null) { $0.union($1) }
+        let scale = content.displays.map { displayScale(for: $0.frame) }.max() ?? 1
         let width = max(1, Int(union.width * scale))
         let height = max(1, Int(union.height * scale))
         guard let context = CGContext(
@@ -76,7 +65,17 @@ actor CaptureService {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else { throw CaptureError.imageCreationFailed }
 
-        for (display, image) in captures {
+        for display in content.displays {
+            let filter = SCContentFilter(display: display, excludingWindows: [])
+            let configuration = SCStreamConfiguration()
+            configuration.width = Int(CGFloat(display.width) * displayScale(for: display.frame))
+            configuration.height = Int(CGFloat(display.height) * displayScale(for: display.frame))
+            configuration.showsCursor = false
+            configuration.captureResolution = .best
+            let image = try await SCScreenshotManager.captureImage(
+                contentFilter: filter,
+                configuration: configuration
+            )
             let x = (display.frame.minX - union.minX) * scale
             let yFromTop = (display.frame.minY - union.minY) * scale
             let destination = CGRect(
@@ -140,7 +139,7 @@ actor CaptureService {
             }
         return await candidates.asyncMap { window in
             let configuration = SCStreamConfiguration()
-            let thumbnailWidth: CGFloat = 320
+            let thumbnailWidth: CGFloat = 192
             let scale = min(1, thumbnailWidth / max(1, window.frame.width))
             configuration.width = max(1, Int(window.frame.width * scale))
             configuration.height = max(1, Int(window.frame.height * scale))

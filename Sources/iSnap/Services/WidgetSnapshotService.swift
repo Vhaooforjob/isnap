@@ -24,8 +24,7 @@ enum WidgetSnapshotService {
         var didPublish = false
         for directory in widgetDirectories() {
             do {
-                try publish(libraryItems, to: directory)
-                didPublish = true
+                didPublish = try publish(libraryItems, to: directory) || didPublish
             } catch {
                 continue
             }
@@ -35,10 +34,14 @@ enum WidgetSnapshotService {
         }
     }
 
-    private static func publish(_ libraryItems: [LibraryItem], to directory: URL) throws {
+    private static func publish(_ libraryItems: [LibraryItem], to directory: URL) throws -> Bool {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
         let recentItems = Array(libraryItems.prefix(3))
+        let snapshotURL = directory.appendingPathComponent("snapshot.json")
+        if isCurrent(snapshotURL: snapshotURL, directory: directory, libraryItems: libraryItems, recentItems: recentItems) {
+            return false
+        }
         var snapshotItems: [WidgetSnapshotItem] = []
         for (index, item) in recentItems.enumerated() {
             let thumbnailName = "recent-\(index).jpg"
@@ -66,7 +69,29 @@ enum WidgetSnapshotService {
             items: snapshotItems
         )
         let data = try JSONEncoder().encode(snapshot)
-        try data.write(to: directory.appendingPathComponent("snapshot.json"), options: .atomic)
+        try data.write(to: snapshotURL, options: .atomic)
+        return true
+    }
+
+    private static func isCurrent(
+        snapshotURL: URL,
+        directory: URL,
+        libraryItems: [LibraryItem],
+        recentItems: [LibraryItem]
+    ) -> Bool {
+        guard let data = try? Data(contentsOf: snapshotURL),
+              let snapshot = try? JSONDecoder().decode(WidgetSnapshot.self, from: data),
+              snapshot.totalCount == libraryItems.count,
+              snapshot.items.count == recentItems.count else { return false }
+        return zip(snapshot.items, recentItems).allSatisfy { snapshotItem, libraryItem in
+            snapshotItem.name == libraryItem.name &&
+            snapshotItem.modifiedAt == libraryItem.modifiedAt &&
+            snapshotItem.width == Int(libraryItem.dimensions.width) &&
+            snapshotItem.height == Int(libraryItem.dimensions.height) &&
+            FileManager.default.fileExists(
+                atPath: directory.appendingPathComponent(snapshotItem.thumbnailName).path
+            )
+        }
     }
 
     private static func widgetDirectories() -> [URL] {
@@ -88,38 +113,8 @@ enum WidgetSnapshotService {
     }
 
     private static func thumbnailData(from url: URL) -> Data? {
-        guard let source = NSImage(contentsOf: url) else { return nil }
-        let sourceSize = source.size
-        guard sourceSize.width > 0, sourceSize.height > 0 else { return nil }
-
-        let maximumPixel: CGFloat = 640
-        let scale = min(1, maximumPixel / max(sourceSize.width, sourceSize.height))
-        let targetSize = CGSize(
-            width: max(1, (sourceSize.width * scale).rounded()),
-            height: max(1, (sourceSize.height * scale).rounded())
-        )
-        guard let bitmap = NSBitmapImageRep(
-            bitmapDataPlanes: nil,
-            pixelsWide: Int(targetSize.width),
-            pixelsHigh: Int(targetSize.height),
-            bitsPerSample: 8,
-            samplesPerPixel: 4,
-            hasAlpha: true,
-            isPlanar: false,
-            colorSpaceName: .deviceRGB,
-            bytesPerRow: 0,
-            bitsPerPixel: 0
-        ), let context = NSGraphicsContext(bitmapImageRep: bitmap) else { return nil }
-
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = context
-        source.draw(
-            in: CGRect(origin: .zero, size: targetSize),
-            from: CGRect(origin: .zero, size: sourceSize),
-            operation: .copy,
-            fraction: 1
-        )
-        NSGraphicsContext.restoreGraphicsState()
+        guard let thumbnail = ImageIOService.thumbnail(at: url, maxPixelSize: 640) else { return nil }
+        let bitmap = NSBitmapImageRep(cgImage: thumbnail)
         return bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.76])
     }
 }

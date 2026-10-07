@@ -7,6 +7,7 @@ This document records the translation from the public WinShot repository (review
 | Fullscreen / multi-display capture | ScreenCaptureKit display capture and CoreGraphics stitching | Implemented |
 | Region overlay | Borderless AppKit windows on each `NSScreen` | Implemented |
 | Window enumeration, thumbnails, capture | `SCShareableContent` and `SCScreenshotManager` | Implemented |
+| Screenshot text extraction (OCR) | Vision text recognition, processed on device | Implemented |
 | Global hotkeys | Carbon `RegisterEventHotKey` | Implemented |
 | System tray | `NSStatusItem` menu | Implemented |
 | Rectangle, ellipse, arrow, line, text | CoreGraphics/CoreText renderer with directional endpoints and inline text editing | Implemented |

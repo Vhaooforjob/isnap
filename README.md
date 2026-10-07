@@ -19,6 +19,7 @@ iSnap is a native macOS screenshot editor inspired by the workflows and feature 
 - 24 gradient backgrounds, padding, inset, rounded corners, shadow, output ratio, and border controls
 - Background styling is opt-in; new and migrated installations start with Show Background disabled
 - PNG/JPEG export, quick save with `⌘S`, rendered-image copy with `⌘C`, clipboard import/export, and filename patterns
+- On-device screenshot text extraction with macOS Vision, including Vietnamese and English recognition
 - Recent-screenshot quick access with one-click Editor/Library navigation and move-to-Trash actions
 - Native macOS small and medium widgets for recent screenshots and quick Editor/Library access
 - Screenshot library with open, reveal, individual delete, and confirmed delete-all actions
