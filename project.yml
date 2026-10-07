@@ -30,6 +30,7 @@ targets:
     dependencies:
       - target: iSnapWidget
         embed: true
+      - sdk: AuthenticationServices.framework
     scheme:
       testTargets:
         - iSnapTests

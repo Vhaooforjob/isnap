@@ -66,6 +66,19 @@ struct SettingsView: View {
             googleClientID = KeychainStore.shared.value(for: .googleClientID) ?? ""
             googleClientSecret = KeychainStore.shared.value(for: .googleClientSecret) ?? ""
         }
+        .task(id: tab) {
+            guard tab == .cloud else { return }
+            while !Task.isCancelled {
+                if model.docVaultConnected {
+                    await model.refreshDocVault(showError: false)
+                }
+                do {
+                    try await Task.sleep(for: .seconds(60))
+                } catch {
+                    return
+                }
+            }
+        }
     }
 
     private var hotkeys: some View {
@@ -156,6 +169,58 @@ struct SettingsView: View {
 
     private var cloud: some View {
         Group {
+            Section("DocVault") {
+                TextField("API server", text: setting(\.cloud.docVault.serverURL))
+                    .disabled(model.docVaultConnected)
+                TextField("Web app", text: setting(\.cloud.docVault.webURL))
+                if model.docVaultConnected {
+                    LabeledContent("Signed in") {
+                        Text(model.docVaultUser?.email ?? "Connected")
+                            .foregroundStyle(.secondary)
+                    }
+                    if !model.docVaultWorkspaces.isEmpty {
+                        Picker("Upload workspace", selection: setting(\.cloud.docVault.workspaceID)) {
+                            ForEach(model.docVaultWorkspaces) { workspace in
+                                Text(workspace.name).tag(workspace.id)
+                            }
+                        }
+                    } else {
+                        Text("Create a workspace in DocVault before uploading screenshots.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    if model.docVaultAccounts.count > 1 {
+                        Picker("Google Drive account", selection: Binding(
+                            get: { model.defaultDocVaultAccount?.id ?? "" },
+                            set: { accountID in Task { await model.selectDocVaultStorageAccount(accountID) } }
+                        )) {
+                            ForEach(model.docVaultAccounts) { account in
+                                Text(account.email).tag(account.id)
+                            }
+                        }
+                    }
+                    if let account = model.defaultDocVaultAccount {
+                        docVaultQuota(account)
+                    } else {
+                        Text("No active Google Drive storage account is linked in DocVault.")
+                            .font(.caption).foregroundStyle(.orange)
+                    }
+                }
+                HStack {
+                    Circle().fill(model.docVaultConnected ? Color.green : Color.secondary).frame(width: 8, height: 8)
+                    Text(model.docVaultConnected ? "Connected" : "Not connected").foregroundStyle(.secondary)
+                    Spacer()
+                    if model.docVaultConnected {
+                        Button("Refresh") { Task { await model.refreshDocVault() } }
+                            .disabled(model.isRefreshingDocVault)
+                        Button("Disconnect") { Task { await model.disconnectDocVault() } }
+                    } else {
+                        Button("Connect") { Task { await model.connectDocVault() } }
+                            .disabled(model.isRefreshingDocVault || store.value.cloud.docVault.serverURL.isEmpty)
+                    }
+                }
+                Text("iSnap uploads through DocVault. Google credentials remain in DocVault; only the DocVault session is stored in macOS Keychain. Capacity refreshes after uploads and every minute while this page is open.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Cloudflare R2") {
                 TextField("Account ID", text: setting(\.cloud.r2.accountID))
                 SecureField("Access Key ID", text: $r2AccessKey)
@@ -191,6 +256,33 @@ struct SettingsView: View {
             }
         }
     }
+
+    @ViewBuilder
+    private func docVaultQuota(_ account: DocVaultStorageAccount) -> some View {
+        LabeledContent("Google Drive") {
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(account.email)
+                if let remaining = account.remainingBytes, let total = account.quotaBytes,
+                   let used = account.quotaUsedBytes, total > 0 {
+                    ProgressView(value: Double(min(used, total)), total: Double(total))
+                        .frame(width: 220)
+                    Text("\(Self.byteFormatter.string(fromByteCount: remaining)) free of \(Self.byteFormatter.string(fromByteCount: total))")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text("Capacity unavailable")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private static let byteFormatter: ByteCountFormatter = {
+        let value = ByteCountFormatter()
+        value.countStyle = .file
+        value.allowedUnits = [.useMB, .useGB, .useTB]
+        value.includesUnit = true
+        return value
+    }()
 
     private func setting<T>(_ keyPath: WritableKeyPath<AppSettings, T>) -> Binding<T> {
         Binding(

@@ -214,6 +214,14 @@ final class ModelTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(AppSettings.self, from: data), settings)
     }
 
+    func testLegacyCloudSettingsReceiveDocVaultDefaults() throws {
+        let data = Data(#"{"r2":{"accountID":"a","bucket":"b","publicURL":"","directory":""},"googleDrive":{"folderID":"f"}}"#.utf8)
+        let decoded = try JSONDecoder().decode(AppSettings.CloudSettings.self, from: data)
+        XCTAssertEqual(decoded.docVault.serverURL, "https://docvault-backend-xokq.onrender.com")
+        XCTAssertEqual(decoded.r2.bucket, "b")
+        XCTAssertEqual(decoded.googleDrive.folderID, "f")
+    }
+
     func testImageOverlayAndWatermarkUseFinalRenderer() async throws {
         try await MainActor.run {
             func makeImage(color: NSColor, size: CGSize) throws -> (NSImage, Data) {

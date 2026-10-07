@@ -27,6 +27,7 @@ iSnap is a native macOS screenshot editor inspired by the workflows and feature 
 - Persistent settings, launch at login, and update checks
 - Cloudflare R2 uploads using native AWS SigV4 signing
 - Google Drive OAuth, upload, and public-link sharing
+- DocVault native PKCE sign-in, workspace uploads, linked Drive account selection, and live quota display
 - Up to eight compressed custom background images
 
 See [docs/feature-parity.md](docs/feature-parity.md) for the source-to-native mapping and remaining integration work.

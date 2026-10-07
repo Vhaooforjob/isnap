@@ -66,6 +66,8 @@ struct ContentView: View {
                         .disabled(!model.r2Connected)
                     Button("Google Drive") { Task { await model.upload(to: .googleDrive) } }
                         .disabled(!model.googleDriveConnected)
+                    Button("DocVault") { Task { await model.upload(to: .docVault) } }
+                        .disabled(!model.docVaultConnected || model.settings.value.cloud.docVault.workspaceID.isEmpty)
                 } label: {
                     Label(model.isUploading ? "Uploading…" : "Upload", systemImage: "icloud.and.arrow.up")
                 }

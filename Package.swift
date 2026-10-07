@@ -14,6 +14,7 @@ let package = Package(
             exclude: ["Resources/Info.plist", "Resources/iSnap.entitlements"],
             linkerSettings: [
                 .linkedFramework("AppKit"),
+                .linkedFramework("AuthenticationServices"),
                 .linkedFramework("Carbon"),
                 .linkedFramework("CoreGraphics"),
                 .linkedFramework("CryptoKit"),

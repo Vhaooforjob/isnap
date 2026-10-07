@@ -75,6 +75,20 @@ struct AppSettings: Codable, Equatable {
     struct CloudSettings: Codable, Equatable {
         var r2 = R2Settings()
         var googleDrive = GoogleDriveSettings()
+        var docVault = DocVaultSettings()
+
+        private enum CodingKeys: String, CodingKey {
+            case r2, googleDrive, docVault
+        }
+
+        init() {}
+
+        init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            r2 = try values.decodeIfPresent(R2Settings.self, forKey: .r2) ?? R2Settings()
+            googleDrive = try values.decodeIfPresent(GoogleDriveSettings.self, forKey: .googleDrive) ?? GoogleDriveSettings()
+            docVault = try values.decodeIfPresent(DocVaultSettings.self, forKey: .docVault) ?? DocVaultSettings()
+        }
     }
 
     struct R2Settings: Codable, Equatable {
@@ -86,5 +100,11 @@ struct AppSettings: Codable, Equatable {
 
     struct GoogleDriveSettings: Codable, Equatable {
         var folderID = ""
+    }
+
+    struct DocVaultSettings: Codable, Equatable {
+        var serverURL = "https://docvault-backend-xokq.onrender.com"
+        var webURL = "https://docvault-dev.vercel.app"
+        var workspaceID = ""
     }
 }

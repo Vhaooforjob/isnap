@@ -28,6 +28,11 @@ final class AppModel: ObservableObject {
     @Published var recognizedSourceName = "Screenshot"
     @Published var r2Connected = false
     @Published var googleDriveConnected = false
+    @Published var docVaultConnected = false
+    @Published var docVaultUser: DocVaultUser?
+    @Published var docVaultWorkspaces: [DocVaultWorkspace] = []
+    @Published var docVaultAccounts: [DocVaultStorageAccount] = []
+    @Published var isRefreshingDocVault = false
 
     let document = EditorDocument()
     let settings = SettingsStore()
@@ -40,6 +45,7 @@ final class AppModel: ObservableObject {
     private let updateService = UpdateService()
     private let r2Uploader = R2Uploader()
     private let googleDriveUploader = GoogleDriveUploader()
+    private let docVaultService = DocVaultService()
     private let screenshotParser = ScreenshotParserService()
     private let hotkeys = GlobalHotkeyService()
     private var cancellables: Set<AnyCancellable> = []
@@ -54,6 +60,8 @@ final class AppModel: ObservableObject {
         Task {
             r2Connected = await r2Uploader.isConfigured(settings.value.cloud.r2)
             googleDriveConnected = await googleDriveUploader.isConnected()
+            docVaultConnected = await docVaultService.isConnected(config: settings.value.cloud.docVault)
+            if docVaultConnected { await refreshDocVault(showError: false) }
         }
         settings.$value
             .dropFirst()
@@ -374,7 +382,57 @@ final class AppModel: ObservableObject {
         } catch { report(error) }
     }
 
-    enum CloudProvider { case r2, googleDrive }
+    var defaultDocVaultAccount: DocVaultStorageAccount? {
+        docVaultAccounts.first(where: { $0.isDefaultStorage })
+    }
+
+    func connectDocVault() async {
+        guard !isRefreshingDocVault else { return }
+        isRefreshingDocVault = true
+        statusText = "Waiting for DocVault sign-in…"
+        defer { isRefreshingDocVault = false }
+        do {
+            let snapshot = try await docVaultService.connect(config: settings.value.cloud.docVault)
+            applyDocVault(snapshot)
+            docVaultConnected = true
+            statusText = "DocVault connected"
+        } catch { report(error) }
+    }
+
+    func disconnectDocVault() async {
+        do {
+            try await docVaultService.disconnect(config: settings.value.cloud.docVault)
+            docVaultConnected = false
+            docVaultUser = nil
+            docVaultWorkspaces = []
+            docVaultAccounts = []
+            statusText = "DocVault disconnected"
+        } catch { report(error) }
+    }
+
+    func refreshDocVault(showError: Bool = true) async {
+        guard !isRefreshingDocVault else { return }
+        isRefreshingDocVault = true
+        defer { isRefreshingDocVault = false }
+        do {
+            let snapshot = try await docVaultService.snapshot(config: settings.value.cloud.docVault)
+            applyDocVault(snapshot)
+            docVaultConnected = true
+        } catch {
+            docVaultConnected = await docVaultService.isConnected(config: settings.value.cloud.docVault)
+            if showError { report(error) }
+        }
+    }
+
+    func selectDocVaultStorageAccount(_ accountID: String) async {
+        do {
+            _ = try await docVaultService.setDefaultStorageAccount(accountID, config: settings.value.cloud.docVault)
+            await refreshDocVault()
+            statusText = "DocVault storage account updated"
+        } catch { report(error) }
+    }
+
+    enum CloudProvider { case r2, googleDrive, docVault }
 
     func upload(to provider: CloudProvider) async {
         guard !isUploading else { return }
@@ -392,6 +450,9 @@ final class AppModel: ObservableObject {
                 url = try await r2Uploader.upload(data, filename: filename, config: settings.value.cloud.r2)
             case .googleDrive:
                 url = try await googleDriveUploader.upload(data, filename: filename, folderID: settings.value.cloud.googleDrive.folderID)
+            case .docVault:
+                url = try await docVaultService.upload(data, filename: filename, config: settings.value.cloud.docVault)
+                await refreshDocVault(showError: false)
             }
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(url.absoluteString, forType: .string)
@@ -433,6 +494,16 @@ final class AppModel: ObservableObject {
         }
         errorMessage = error.localizedDescription
         statusText = "Failed"
+    }
+
+    private func applyDocVault(_ snapshot: DocVaultSnapshot) {
+        docVaultUser = snapshot.user
+        docVaultWorkspaces = snapshot.workspaces
+        docVaultAccounts = snapshot.storageAccounts
+        let configuredWorkspace = settings.value.cloud.docVault.workspaceID
+        if !snapshot.workspaces.contains(where: { $0.id == configuredWorkspace }) {
+            settings.value.cloud.docVault.workspaceID = snapshot.workspaces.first?.id ?? ""
+        }
     }
 
     private static let uploadTimestamp: DateFormatter = {

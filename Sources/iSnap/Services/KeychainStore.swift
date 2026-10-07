@@ -7,6 +7,7 @@ enum KeychainKey: String {
     case googleClientID
     case googleClientSecret
     case googleOAuthToken
+    case docVaultSession
 }
 
 enum KeychainError: LocalizedError {
@@ -67,4 +68,3 @@ final class KeychainStore: @unchecked Sendable {
         guard status == errSecSuccess || status == errSecItemNotFound else { throw KeychainError.status(status) }
     }
 }
-
