@@ -7,9 +7,9 @@
 <p align="center"><b>The native macOS screenshot editor.</b><br>Capture any screen, annotate and beautify it, keep every capture hanging on a line under the menu bar, then share it anywhere.</p>
 
 <p align="center">
-  <a href="docs/assets/isnap-introduce.mp4"><img src="docs/assets/isnap-introduce.jpg" width="820" alt="Watch the iSnap introduction video (40 s)"></a>
+  <a href="docs/assets/isnap-introduce.mp4"><img src="docs/assets/isnap-introduce-preview.webp" width="820" alt="iSnap in motion: capture, annotate, the Capture Line, and sharing. Click for the full video with sound."></a>
   <br>
-  <sub>▶ <a href="docs/assets/isnap-introduce.mp4">Watch the 40-second introduction</a> · <a href="docs/USER_GUIDE.md">User guide</a></sub>
+  <sub>▶ <a href="docs/assets/isnap-introduce.mp4">Watch the full 40-second introduction with sound</a> · <a href="docs/USER_GUIDE.md">User guide</a></sub>
 </p>
 
 iSnap is written in Swift with SwiftUI, AppKit, and ScreenCaptureKit. No web view, no JavaScript runtime, and nothing leaves your Mac unless you choose to upload it.
