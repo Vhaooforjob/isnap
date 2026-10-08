@@ -45,7 +45,7 @@ One Share menu on Capture Line cards, in the editor, and in the Library: AirDrop
 - **English and Tiếng Việt** interface, switchable from the menu bar icon
 - PNG/JPEG export, quick save (`⌘S`), copy (`⌘C`), filename patterns, launch at login, and update checks
 
-| Hotkeyss | Text extraction | Storage |
+| Hotkeys | Text extraction | Storage |
 | --- | --- | --- |
 | <img src="docs/assets/screenshots/settings-hotkeys.png" alt="An exported image with a gradient frame"> | <img src="docs/assets/screenshots/ocr.png" alt="Extracted text"> | <img src="docs/assets/screenshots/settings-storage.png" alt="Storage settings"> |
 
