@@ -32,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     weak var model: AppModel? {
         didSet {
             model?.presentMainWindow = { [weak self] in self?.showApp() }
+            model?.startCaptureLine()
             applyStartupVisibilityIfNeeded()
             let links = pendingDeepLinks
             pendingDeepLinks.removeAll()
@@ -45,6 +46,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         buildStatusItem()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        model?.stopCaptureLine()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
@@ -74,6 +79,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         menu.addItem(withTitle: "Capture All Displays", action: #selector(captureAll), keyEquivalent: "")
         menu.addItem(withTitle: "Capture Region", action: #selector(captureRegion), keyEquivalent: "")
         menu.addItem(withTitle: "Capture Window", action: #selector(captureWindow), keyEquivalent: "")
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Show or Hide Capture Line", action: #selector(toggleCaptureLine), keyEquivalent: "")
+        menu.addItem(withTitle: "Take Everything Down", action: #selector(clearCaptureLine), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Screenshot Library", action: #selector(showLibrary), keyEquivalent: "")
         menu.addItem(withTitle: "Settings…", action: #selector(showSettings), keyEquivalent: ",")
@@ -111,6 +119,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func captureAll() { Task { await model?.capture(.fullScreen) } }
     @objc private func captureRegion() { Task { await model?.capture(.region) } }
     @objc private func captureWindow() { Task { await model?.capture(.window) } }
+
+    @objc private func toggleCaptureLine() { model?.toggleCaptureLine() }
+    @objc private func clearCaptureLine() { model?.clearCaptureLine() }
 
     @objc private func showLibrary() {
         showApp()
@@ -233,6 +244,9 @@ private struct iSnapCommands: Commands {
             Divider()
             Button("Extract Text from Screenshot") { Task { await model.parseScreenshot() } }
                 .disabled(model.document.image == nil || model.isParsingScreenshot)
+            Divider()
+            Button("Show or Hide Capture Line", action: model.toggleCaptureLine)
+            Button("Take Everything Down", action: model.clearCaptureLine)
         }
     }
 }

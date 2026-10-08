@@ -4,6 +4,7 @@ import Foundation
 @MainActor
 final class GlobalHotkeyService {
     var onHotkey: ((CaptureMode) -> Void)?
+    var onToggleCaptureLine: (() -> Void)?
 
     private var references: [EventHotKeyRef?] = []
     private var handler: EventHandlerRef?
@@ -48,6 +49,7 @@ final class GlobalHotkeyService {
         register(settings.fullScreen, id: 1)
         register(settings.region, id: 2)
         register(settings.window, id: 3)
+        register(settings.toggleCaptureLine, id: 4)
     }
 
     private func register(_ shortcut: String, id: UInt32) {
@@ -65,6 +67,7 @@ final class GlobalHotkeyService {
         case 1: onHotkey?(.fullScreen)
         case 2: onHotkey?(.region)
         case 3: onHotkey?(.window)
+        case 4: onToggleCaptureLine?()
         default: break
         }
     }

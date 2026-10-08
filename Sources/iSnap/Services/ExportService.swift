@@ -39,7 +39,10 @@ final class ExportService {
     }
 
     func archiveCapture(_ image: NSImage, settings: AppSettings) throws -> URL {
-        let folder = settings.quickSave.folder
+        try archiveCapture(image, in: settings.quickSave.folder)
+    }
+
+    func archiveCapture(_ image: NSImage, in folder: URL) throws -> URL {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let base = "iSnap-Capture-\(Self.timestamp.string(from: Date()))"
         var url = folder.appendingPathComponent("\(base).png")

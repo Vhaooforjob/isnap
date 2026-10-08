@@ -14,7 +14,11 @@ SwiftUI App / NSStatusItem / Commands
                  ├─ GlobalHotkeyService (Carbon)
                  ├─ Cloud uploaders (CryptoKit/URLSession/Network)
                  ├─ KeychainStore (Security)
-                 └─ UpdateService (URLSession)
+                 ├─ UpdateService (URLSession)
+                 └─ CaptureLineController (AppKit panel)
+                      ├─ CaptureLine (model) + CaptureLineView / CaptureLineFlight
+                      ├─ ScreenshotFolderWatcher + SystemScreenshotRouting
+                      └─ SystemMarkupService (NSSharingService)
 ```
 
 `EditorDocument` is the source of truth for the current image, annotation list, crop state, styling defaults, and history. The interactive AppKit view translates pointer coordinates into source-image coordinates. The same `ExportRenderer` produces the on-screen preview and final exported pixels, preventing preview/export drift.
@@ -24,3 +28,5 @@ Editor Save and Copy toolbar/menu actions both render through `ExportService`. T
 Inserted overlay images are PNG-backed `Annotation` values, so selection, transforms, opacity, history, crop translation, preview, and export use the existing document pipeline. Watermarks live in `CanvasConfiguration`; `ExportRenderer` composites text or image stamps last, either at an anchored position or tiled across the complete output.
 
 System services remain independent from SwiftUI views. This keeps Screen Recording permission, file access, hotkey registration, and launch-at-login behavior testable and replaceable.
+
+The Capture Line is a second destination for captures. `AppModel.accept` archives each fresh capture (to the Library, or to the line's own folder when archiving is off) and hands the file plus its on-screen origin to `CaptureLineController`, which owns the floating panel, pointer tracking, full-screen detection, and the optional macOS screenshot routing. `CaptureLine` only references files; double-click returns a file to `EditorDocument` through `AppModel.editCapture(at:)`.

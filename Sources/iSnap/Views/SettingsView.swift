@@ -15,6 +15,7 @@ struct SettingsView: View {
         case hotkeys = "Hotkeys"
         case startup = "Startup"
         case quickSave = "Quick Save"
+        case captureLine = "Capture Line"
         case export = "Export"
         case updates = "Updates"
         case cloud = "Cloud"
@@ -24,6 +25,7 @@ struct SettingsView: View {
             case .hotkeys: "keyboard"
             case .startup: "power"
             case .quickSave: "square.and.arrow.down"
+            case .captureLine: "rectangle.3.group"
             case .export: "photo"
             case .updates: "arrow.triangle.2.circlepath"
             case .cloud: "cloud"
@@ -43,6 +45,7 @@ struct SettingsView: View {
                     case .hotkeys: hotkeys
                     case .startup: startup
                     case .quickSave: quickSave
+                    case .captureLine: captureLine
                     case .export: export
                     case .updates: updates
                     case .cloud: cloud
@@ -93,6 +96,9 @@ struct SettingsView: View {
                 LabeledContent("Window") {
                     HotkeyRecorder(shortcut: setting(\.hotkeys.window))
                 }
+                LabeledContent("Show or hide Capture Line") {
+                    HotkeyRecorder(shortcut: setting(\.hotkeys.toggleCaptureLine))
+                }
             }
             Section("Editor shortcuts") {
                 LabeledContent("Save edited image") {
@@ -123,6 +129,34 @@ struct SettingsView: View {
             Toggle("Play sound after save", isOn: setting(\.startup.showNotifications))
             Text("Launch at login works after iSnap.app is placed in Applications. macOS may require approval in System Settings → General → Login Items.")
                 .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private var captureLine: some View {
+        Group {
+            Section("Capture Line") {
+                Toggle("Hang new captures on a line under the menu bar", isOn: setting(\.captureLine.isEnabled))
+                Toggle("Open the editor after each capture", isOn: setting(\.captureLine.opensEditorAfterCapture))
+                    .disabled(!store.value.captureLine.isEnabled)
+                Toggle("Reveal the line when the pointer rests in the menu bar", isOn: setting(\.captureLine.revealsFromMenuBar))
+                    .disabled(!store.value.captureLine.isEnabled)
+                Toggle("Play sounds", isOn: setting(\.captureLine.playsSounds))
+                    .disabled(!store.value.captureLine.isEnabled)
+            }
+            Section("macOS screenshots") {
+                Toggle("Also hang screenshots taken with ⇧⌘3, ⇧⌘4 and ⇧⌘5", isOn: setting(\.captureLine.hangsSystemScreenshots))
+                    .disabled(!store.value.captureLine.isEnabled)
+                Toggle("Keep them off the Desktop", isOn: setting(\.captureLine.routesSystemScreenshots))
+                    .disabled(!store.value.captureLine.isEnabled || !store.value.captureLine.hangsSystemScreenshots)
+                Text("Turns off the floating thumbnail and saves new macOS screenshots to iSnap's line folder, the same options found in ⇧⌘5. Drag one to a folder to keep it. Your previous settings come back when this is turned off or iSnap quits.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Gestures") {
+                Text("Click copies • Double-click edits in iSnap • Press and hold opens Markup • Drag into an app sends a copy • Drag to the Trash or click the cross takes it down • Right-click for more.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Text("Captures that only live on the line are trashed when taken down. Library files are never deleted from the line.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
         }
     }
 

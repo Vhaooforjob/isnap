@@ -36,6 +36,8 @@ final class AppModel: ObservableObject {
 
     let document = EditorDocument()
     let settings = SettingsStore()
+    let captureLine = CaptureLine()
+    let captureLineController: CaptureLineController
     var presentMainWindow: (() -> Void)?
 
     private let captureService = CaptureService()
@@ -52,9 +54,16 @@ final class AppModel: ObservableObject {
     private var widgetPublishTask: Task<Void, Never>?
 
     init() {
+        captureLineController = CaptureLineController(line: captureLine)
         document.canvas = settings.value.canvas
         hotkeys.onHotkey = { [weak self] mode in
             Task { await self?.capture(mode) }
+        }
+        hotkeys.onToggleCaptureLine = { [weak self] in
+            self?.captureLineController.toggle()
+        }
+        captureLine.onEdit = { [weak self] url in
+            self?.editCapture(at: url)
         }
         hotkeys.register(settings.value.hotkeys)
         Task {
@@ -67,6 +76,7 @@ final class AppModel: ObservableObject {
             .dropFirst()
             .sink { [weak self] value in
                 self?.hotkeys.register(value.hotkeys)
+                self?.captureLineController.apply(value.captureLine)
             }
             .store(in: &cancellables)
     }
@@ -81,11 +91,13 @@ final class AppModel: ObservableObject {
         statusText = "Capturing…"
         do {
             let result: CaptureResult
+            var origin: CGRect?
             switch mode {
             case .fullScreen:
                 NSApp.hide(nil)
                 try await Task.sleep(for: .milliseconds(180))
                 result = try await captureService.captureAllDisplays()
+                origin = (NSScreen.main ?? NSScreen.screens.first)?.frame
                 NSApp.unhide(nil)
             case .region:
                 let visibleWindows = NSApp.windows.filter { $0.isVisible && !($0 is NSPanel) }
@@ -96,6 +108,7 @@ final class AppModel: ObservableObject {
                         throw CaptureError.cancelled
                     }
                     result = try await captureService.capture(displayID: selection.displayID, region: selection.rect)
+                    origin = Self.screenRect(of: selection)
                 } catch {
                     visibleWindows.forEach { $0.makeKeyAndOrderFront(nil) }
                     throw error
@@ -104,7 +117,7 @@ final class AppModel: ObservableObject {
             case .window:
                 throw CaptureError.cancelled
             }
-            accept(result)
+            accept(result, isCapture: true, capturedFrom: origin)
         } catch CaptureError.cancelled {
             statusText = "Capture cancelled"
         } catch {
@@ -134,7 +147,7 @@ final class AppModel: ObservableObject {
             try await Task.sleep(for: .milliseconds(150))
             let result = try await captureService.capture(windowID: window.id)
             NSApp.unhide(nil)
-            accept(result)
+            accept(result, isCapture: true, capturedFrom: ScreenshotFolderWatcher.appKitRect(fromTopLeftGlobal: window.frame))
         } catch {
             NSApp.unhide(nil)
             report(error)
@@ -297,6 +310,7 @@ final class AppModel: ObservableObject {
     func deleteLibraryItem(_ item: LibraryItem) async {
         do {
             try await libraryService.delete(item, rootFolder: settings.value.quickSave.folder)
+            captureLine.prune()
             await reloadLibrary()
             statusText = "Moved \(item.name) to Trash"
         } catch { report(error) }
@@ -305,6 +319,7 @@ final class AppModel: ObservableObject {
     func deleteAllLibraryItems() async {
         do {
             let count = try await libraryService.deleteAll(in: settings.value.quickSave.folder)
+            captureLine.prune()
             await reloadLibrary()
             statusText = count == 1 ? "Moved 1 screenshot to Trash" : "Moved \(count) screenshots to Trash"
         } catch {
@@ -315,6 +330,33 @@ final class AppModel: ObservableObject {
 
     func revealLibrary() {
         NSWorkspace.shared.activateFileViewerSelecting([settings.value.quickSave.folder])
+    }
+
+    // MARK: Capture Line
+
+    func startCaptureLine() {
+        captureLineController.start(with: settings.value.captureLine)
+    }
+
+    func stopCaptureLine() {
+        captureLineController.shutdown()
+    }
+
+    func toggleCaptureLine() {
+        captureLineController.toggle()
+    }
+
+    func clearCaptureLine() {
+        captureLineController.clear()
+    }
+
+    /// Double-click or "Edit in iSnap" on a hanging capture.
+    func editCapture(at url: URL) {
+        guard let image = NSImage(contentsOf: url) else {
+            errorMessage = "\(url.lastPathComponent) could not be opened."
+            return
+        }
+        loadIntoEditor(CaptureResult(image: image, sourceName: url.lastPathComponent))
     }
 
     func checkForUpdates() async {
@@ -461,7 +503,39 @@ final class AppModel: ObservableObject {
         isUploading = false
     }
 
-    private func accept(_ result: CaptureResult) {
+    /// - Parameters:
+    ///   - isCapture: a fresh screen capture, as opposed to an opened or pasted image.
+    ///   - origin: the captured area in screen coordinates, where the Capture Line flight starts.
+    private func accept(_ result: CaptureResult, isCapture: Bool = false, capturedFrom origin: CGRect? = nil) {
+        let lineSettings = settings.value.captureLine
+        let hangsOnLine = isCapture && lineSettings.isEnabled
+        if !hangsOnLine || lineSettings.opensEditorAfterCapture {
+            loadIntoEditor(result)
+        } else {
+            statusText = "Captured • Hanging on the Capture Line"
+        }
+        let archives = settings.value.quickSave.autoSaveCaptures
+        guard archives || hangsOnLine else { return }
+        if archives { statusText = "Captured • Saving to Library…" }
+        Task { [weak self] in
+            await Task.yield()
+            guard let self else { return }
+            do {
+                // Without Library archiving, the capture lives only on the line.
+                let folder = archives ? settings.value.quickSave.folder : captureLine.ownedFolder
+                let archived = try exportService.archiveCapture(result.image, in: folder)
+                if hangsOnLine { captureLineController.hang(archived, from: origin) }
+                if archives {
+                    statusText = "Captured and saved \(archived.lastPathComponent)"
+                    await reloadLibrary()
+                }
+            } catch {
+                statusText = archives ? "Captured • Library save failed" : "Captured • Capture Line save failed"
+            }
+        }
+    }
+
+    private func loadIntoEditor(_ result: CaptureResult) {
         document.load(result)
         recognizedText = ""
         isShowingParsedData = false
@@ -469,20 +543,20 @@ final class AppModel: ObservableObject {
         section = .editor
         statusText = "\(Int(document.imagePixelSize.width)) × \(Int(document.imagePixelSize.height)) px"
         presentMainWindow?()
-        if settings.value.quickSave.autoSaveCaptures {
-            statusText = "Captured • Saving to Library…"
-            Task { [weak self] in
-                await Task.yield()
-                guard let self else { return }
-                do {
-                    let archived = try exportService.archiveCapture(result.image, settings: settings.value)
-                    statusText = "Captured and saved \(archived.lastPathComponent)"
-                    await reloadLibrary()
-                } catch {
-                    statusText = "Captured • Library save failed"
-                }
-            }
-        }
+    }
+
+    /// A region selection is display-local with a top-left origin; the
+    /// Capture Line needs it in AppKit screen coordinates.
+    private static func screenRect(of selection: ScreenSelection) -> CGRect? {
+        guard let screen = NSScreen.screens.first(where: {
+            ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID) == selection.displayID
+        }) else { return nil }
+        return CGRect(
+            x: screen.frame.minX + selection.rect.minX,
+            y: screen.frame.maxY - selection.rect.minY - selection.rect.height,
+            width: selection.rect.width,
+            height: selection.rect.height
+        )
     }
 
     private func report(_ error: Error) {

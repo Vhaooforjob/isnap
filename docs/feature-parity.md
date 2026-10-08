@@ -34,6 +34,27 @@ This document records the translation from the public WinShot repository (review
 | Google Drive upload | Loopback OAuth + Drive multipart upload/public permission | Implemented |
 | Custom background images | Compressed Application Support library (max 8) | Implemented |
 
+## Tendedero → iSnap Capture Line
+
+Reviewed from the public Tendedero repository (`main`, 2026-10-08). Tendedero never captures; it hangs screenshots taken by macOS on a line under the menu bar. iSnap keeps its own capture pipeline and adds the line as a destination.
+
+| Tendedero area | iSnap implementation | Status |
+|---|---|---|
+| Line under the menu bar, auto-hiding like the Dock | `CaptureLineController` + non-activating `CaptureLinePanel`; reveal after resting 0.25 s in the menu bar, retract 0.5 s after leaving; click in the menu bar tucks it away | Implemented |
+| Peek after a new capture | 2.5 s reveal on the screen the capture was taken on | Implemented |
+| Capture flies to the line / card falls when discarded | `CaptureLineFlight` (Core Animation overlay window); region and window captures use their real screen rect | Implemented |
+| Click copy, double-click open, press-and-hold Markup | Click copies PNG + file URL; **double-click opens in the iSnap editor**; hold opens system Markup and writes back | Implemented (adapted) |
+| Drag to app / folder / Trash | `NSDraggingSource`: apps get a copy; folders move line-only captures but only **copy** Library files; Trash discards | Implemented (adapted) |
+| Toggle shortcut `⌃⌥T` | Global Carbon hotkey, configurable in Settings → Hotkeys | Implemented |
+| Watch macOS screenshot folder | `ScreenshotFolderWatcher` (DispatchSource), Desktop limited to files tagged as screen captures | Implemented, on by default |
+| Inbox mode (route screenshots, disable floating thumbnail) | `SystemScreenshotRouting`, opt-in toggle, restored on quit/SIGTERM/disable | Implemented, off by default |
+| Hide during full-screen Spaces | Private `CGSCopyManagedDisplaySpaces` Space type check | Implemented |
+| Breeze, tilt, glass cards, clip, sounds | SwiftUI `CaptureLineView`; sounds toggle in Settings | Implemented |
+| Persist line across launches | `UserDefaults` (`captureLine.items`), missing files pruned | Implemented |
+| Localization (es, zh-Hans) | iSnap UI is English-only | Not ported |
+
+iSnap-specific choices: captures can skip the editor (`Open the editor after each capture` off) and live only on the line; with Library archiving off they are written to `~/Library/Application Support/iSnap/Line` and trashed when taken down. Library files are never deleted from the line.
+
 ## Deliberate platform adaptations
 
 - Windows `PrintScreen` shortcuts are replaced with macOS-safe defaults: `⌃⌥1`, `⌃⌥2`, and `⌃⌥3`.

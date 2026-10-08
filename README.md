@@ -20,6 +20,8 @@ iSnap is a native macOS screenshot editor inspired by the workflows and feature 
 - Background styling is opt-in; new and migrated installations start with Show Background disabled
 - PNG/JPEG export, quick save with `⌘S`, rendered-image copy with `⌘C`, clipboard import/export, and filename patterns
 - On-device screenshot text extraction with macOS Vision, including Vietnamese and English recognition
+- Capture Line: recent captures hang on a line tucked under the menu bar; rest the pointer in the menu bar (or press `⌃⌥T`) to bring it down. Click to copy, double-click to edit in iSnap, press and hold for Markup, drag into apps or folders, drag to Trash or click the cross to take down. New captures fly up to the line; the line hides during full-screen apps
+- Optional pickup of macOS screenshots (`⇧⌘3/4/5`) onto the Capture Line, with an opt-in mode that keeps them off the Desktop and restores the original screenshot settings on quit
 - Recent-screenshot quick access with one-click Editor/Library navigation and move-to-Trash actions
 - Native macOS small and medium widgets for recent screenshots and quick Editor/Library access
 - Screenshot library with open, reveal, individual delete, and confirmed delete-all actions
@@ -31,7 +33,7 @@ iSnap is a native macOS screenshot editor inspired by the workflows and feature 
 - Up to eight compressed custom background images
 
 See [docs/feature-parity.md](docs/feature-parity.md) for the source-to-native mapping and remaining integration work.
-WinShot attribution and its BSD terms are preserved in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+WinShot attribution and its BSD terms, and Tendedero attribution and its MIT terms, are preserved in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Requirements
 

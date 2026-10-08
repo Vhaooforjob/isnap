@@ -8,7 +8,27 @@ struct AppSettings: Codable, Equatable {
     var canvas = CanvasConfiguration()
     var update = UpdateSettings()
     var cloud = CloudSettings()
+    var captureLine = CaptureLineSettings()
     var backgroundImages: [URL] = []
+
+    private enum CodingKeys: String, CodingKey {
+        case hotkeys, startup, quickSave, export, canvas, update, cloud, captureLine, backgroundImages
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        hotkeys = try values.decodeIfPresent(HotkeySettings.self, forKey: .hotkeys) ?? HotkeySettings()
+        startup = try values.decodeIfPresent(StartupSettings.self, forKey: .startup) ?? StartupSettings()
+        quickSave = try values.decodeIfPresent(QuickSaveSettings.self, forKey: .quickSave) ?? QuickSaveSettings()
+        export = try values.decodeIfPresent(ExportSettings.self, forKey: .export) ?? ExportSettings()
+        canvas = try values.decodeIfPresent(CanvasConfiguration.self, forKey: .canvas) ?? CanvasConfiguration()
+        update = try values.decodeIfPresent(UpdateSettings.self, forKey: .update) ?? UpdateSettings()
+        cloud = try values.decodeIfPresent(CloudSettings.self, forKey: .cloud) ?? CloudSettings()
+        captureLine = try values.decodeIfPresent(CaptureLineSettings.self, forKey: .captureLine) ?? CaptureLineSettings()
+        backgroundImages = try values.decodeIfPresent([URL].self, forKey: .backgroundImages) ?? []
+    }
 
     struct HotkeySettings: Codable, Equatable {
         var fullScreen = "⌃⌥1"
@@ -16,9 +36,10 @@ struct AppSettings: Codable, Equatable {
         var window = "⌃⌥3"
         var saveEditedImage = "⌘S"
         var copyEditedImage = "⌘C"
+        var toggleCaptureLine = "⌃⌥T"
 
         private enum CodingKeys: String, CodingKey {
-            case fullScreen, region, window, saveEditedImage, copyEditedImage
+            case fullScreen, region, window, saveEditedImage, copyEditedImage, toggleCaptureLine
         }
 
         init() {}
@@ -30,6 +51,7 @@ struct AppSettings: Codable, Equatable {
             window = try values.decodeIfPresent(String.self, forKey: .window) ?? "⌃⌥3"
             saveEditedImage = try values.decodeIfPresent(String.self, forKey: .saveEditedImage) ?? "⌘S"
             copyEditedImage = try values.decodeIfPresent(String.self, forKey: .copyEditedImage) ?? "⌘C"
+            toggleCaptureLine = try values.decodeIfPresent(String.self, forKey: .toggleCaptureLine) ?? "⌃⌥T"
         }
     }
 
@@ -88,6 +110,33 @@ struct AppSettings: Codable, Equatable {
             r2 = try values.decodeIfPresent(R2Settings.self, forKey: .r2) ?? R2Settings()
             googleDrive = try values.decodeIfPresent(GoogleDriveSettings.self, forKey: .googleDrive) ?? GoogleDriveSettings()
             docVault = try values.decodeIfPresent(DocVaultSettings.self, forKey: .docVault) ?? DocVaultSettings()
+        }
+    }
+
+    /// The Capture Line: recent captures hang on a line tucked under the menu bar.
+    struct CaptureLineSettings: Codable, Equatable {
+        var isEnabled = true
+        var opensEditorAfterCapture = true
+        var hangsSystemScreenshots = true
+        var routesSystemScreenshots = false
+        var revealsFromMenuBar = true
+        var playsSounds = true
+
+        private enum CodingKeys: String, CodingKey {
+            case isEnabled, opensEditorAfterCapture, hangsSystemScreenshots
+            case routesSystemScreenshots, revealsFromMenuBar, playsSounds
+        }
+
+        init() {}
+
+        init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            isEnabled = try values.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
+            opensEditorAfterCapture = try values.decodeIfPresent(Bool.self, forKey: .opensEditorAfterCapture) ?? true
+            hangsSystemScreenshots = try values.decodeIfPresent(Bool.self, forKey: .hangsSystemScreenshots) ?? true
+            routesSystemScreenshots = try values.decodeIfPresent(Bool.self, forKey: .routesSystemScreenshots) ?? false
+            revealsFromMenuBar = try values.decodeIfPresent(Bool.self, forKey: .revealsFromMenuBar) ?? true
+            playsSounds = try values.decodeIfPresent(Bool.self, forKey: .playsSounds) ?? true
         }
     }
 
