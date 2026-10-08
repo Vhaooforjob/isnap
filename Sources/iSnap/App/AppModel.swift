@@ -39,8 +39,8 @@ final class AppModel: ObservableObject {
     @Published var isMeasuringStorage = false
 
     let document = EditorDocument()
-    let settings = SettingsStore()
-    let captureLine = CaptureLine()
+    let settings: SettingsStore
+    let captureLine: CaptureLine
     let captureLineController: CaptureLineController
     var presentMainWindow: (() -> Void)?
 
@@ -56,8 +56,16 @@ final class AppModel: ObservableObject {
     private let hotkeys = GlobalHotkeyService()
     private var cancellables: Set<AnyCancellable> = []
     private var widgetPublishTask: Task<Void, Never>?
+    /// False for a model built around demo data (documentation renders):
+    /// no hotkeys, no Keychain or network checks, no widget publishing.
+    private let connectsServices: Bool
 
-    init() {
+    init(settings: SettingsStore? = nil, captureLine: CaptureLine? = nil, connectsServices: Bool = true) {
+        let settings = settings ?? SettingsStore()
+        let captureLine = captureLine ?? CaptureLine()
+        self.settings = settings
+        self.captureLine = captureLine
+        self.connectsServices = connectsServices
         captureLineController = CaptureLineController(line: captureLine)
         document.canvas = settings.value.canvas
         hotkeys.onHotkey = { [weak self] mode in
@@ -72,6 +80,7 @@ final class AppModel: ObservableObject {
         captureLine.shareMenu = { [weak self] url in
             self?.shareMenu(for: url) ?? NSMenu()
         }
+        guard connectsServices else { return }
         Task { await refreshStorage() }
         hotkeys.register(settings.value.hotkeys)
         Task {
@@ -315,6 +324,7 @@ final class AppModel: ObservableObject {
             try FileManager.default.createDirectory(at: settings.value.quickSave.folder, withIntermediateDirectories: true)
             let items = try await libraryService.items(in: settings.value.quickSave.folder)
             libraryItems = items
+            guard connectsServices else { return }
             widgetPublishTask?.cancel()
             widgetPublishTask = Task(priority: .utility) { [libraryService] in
                 guard !Task.isCancelled else { return }

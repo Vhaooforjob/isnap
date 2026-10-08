@@ -1,65 +1,88 @@
-# iSnap
+<p align="center">
+  <img src="docs/assets/isnap-logo-v1.png" width="120" alt="iSnap logo">
+</p>
 
-![iSnap logo](docs/assets/isnap-logo-v1.png)
+<h1 align="center">iSnap</h1>
 
-iSnap is a native macOS screenshot editor inspired by the workflows and feature set of [WinShot](https://github.com/mrgoonie/winshot). It is implemented in Swift with SwiftUI, AppKit, ScreenCaptureKit, CoreGraphics, Carbon hotkeys, and ServiceManagement—without a web view or JavaScript runtime.
+<p align="center"><b>The native macOS screenshot editor.</b><br>Capture any screen, annotate and beautify it, keep every capture hanging on a line under the menu bar, then share it anywhere.</p>
 
-## Current feature set
+<p align="center">
+  <a href="docs/assets/isnap-introduce.mp4"><img src="docs/assets/isnap-introduce.jpg" width="820" alt="Watch the iSnap introduction video (40 s)"></a>
+  <br>
+  <sub>▶ <a href="docs/assets/isnap-introduce.mp4">Watch the 40-second introduction</a> · <a href="docs/USER_GUIDE.md">User guide</a></sub>
+</p>
 
-- Capture the screen under the pointer (`⌃⌥1`), a dragged region on any display (`⌃⌥2`), a selected application window (`⌃⌥3`), or all displays stitched into one image
-- Automatically reopen the editor after capture and archive captures into the screenshot library
-- Menu-bar actions plus configurable global capture and editor keyboard shortcuts
-- Native annotation canvas: rectangle, ellipse, arrow, line, popup text editing, numeric/alphabetic markers, and spotlight
-- Movable, resizable, rotatable image overlays with per-image opacity
-- Built-in sticker palette with movable, resizable, rotatable, and opacity-adjustable stickers
-- Text or image watermarks with opacity, size, nine anchored positions, and full-image tiling
-- Inline text editing plus a zoomable, pannable editor preview
-- Select, move, resize, rotate, delete, undo, and redo annotations
-- Non-destructive crop selection with aspect-ratio presets
-- 24 gradient backgrounds, padding, inset, rounded corners, shadow, output ratio, and border controls
-- Background styling is opt-in; new and migrated installations start with Show Background disabled
-- PNG/JPEG export, quick save with `⌘S`, rendered-image copy with `⌘C`, clipboard import/export, and filename patterns
-- On-device screenshot text extraction with macOS Vision, including Vietnamese and English recognition
-- Capture Line: recent captures hang on a line tucked under the menu bar; rest the pointer in the menu bar (or press `⌃⌥T`) to bring it down. Click to copy, double-click to edit in iSnap, press and hold for Markup, drag into apps or folders, drag to Trash or click the cross to take down. New captures fly up to the line; the line hides during full-screen apps
-- Optional pickup of macOS screenshots (`⇧⌘3/4/5`) onto the Capture Line, following the save location set in `⇧⌘5`, with an opt-in mode that keeps them off the Desktop and restores the original screenshot settings on quit. Screenshots copied to the clipboard (`⌃⇧⌘3/4`) are saved to the line folder and hung too. Three display modes, chosen from the menu bar icon's Capture Line submenu or Settings: Show on Hover (rest the pointer in the menu bar), Always Show, and Hide. `⌃⌥T` shows or hides it right away in any mode, and the menu bar icon lists every capture shortcut
-- Share from Capture Line cards (hover button or right-click), the editor toolbar and status bar, and the Library: AirDrop, Messages, Mail, every share extension, Open With any app, copy image/file/path, or upload to R2, Google Drive, or DocVault and copy the link
-- Storage overview in Settings → Storage (Library, Capture Line, cache, widget thumbnails, backgrounds, settings), refreshed live, with Clear Cache and Capture Line cleanup
-- English and Vietnamese interface, switchable in Settings → Startup or from the menu bar icon (iSnap relaunches to apply)
-- Recent-screenshot quick access with one-click Editor/Library navigation and move-to-Trash actions
-- Native macOS small and medium widgets for recent screenshots and quick Editor/Library access
-- Screenshot library with open, reveal, individual delete, and confirmed delete-all actions
-- Responsive editor controls that collapse labels and move contextual styling into a compact popover
-- Persistent settings, launch at login, and update checks
-- Cloudflare R2 uploads using native AWS SigV4 signing
-- Google Drive OAuth, upload, and public-link sharing
-- DocVault native PKCE sign-in, workspace uploads, linked Drive account selection, and live quota display
-- Up to eight compressed custom background images
+iSnap is written in Swift with SwiftUI, AppKit, and ScreenCaptureKit. No web view, no JavaScript runtime, and nothing leaves your Mac unless you choose to upload it.
 
-See [docs/feature-parity.md](docs/feature-parity.md) for the source-to-native mapping and remaining integration work.
-WinShot attribution and its BSD terms, and Tendedero attribution and its MIT terms, are preserved in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+## Highlights
+
+### Capture the screen you are looking at
+
+`⌃⌥1` captures the display under the pointer, `⌃⌥2` drags a region on any display, `⌃⌥3` picks an application window, and **All Displays** stitches every screen into one image. Captures open in the editor and are archived to your Library automatically.
+
+### Annotate and beautify
+
+Rectangles, ellipses, arrows (straight or curved), lines, text, numbered or lettered markers, spotlight, image overlays, and emoji stickers, all movable, resizable, and rotatable with undo/redo. Frame the result with 24 gradients or your own background, padding, rounded corners, shadow, border, output ratio, and a text or image watermark. Crop non-destructively.
+
+<p align="center"><img src="docs/assets/screenshots/editor.png" width="820" alt="The iSnap editor with arrows, numbered markers, a sticker, and a gradient frame"></p>
+
+### The Capture Line
+
+Every capture flies up and hangs on a line tucked under the menu bar, including screenshots taken with `⇧⌘3/4/5` and clipboard screenshots (`⌃⇧⌘3/4`). Click a card to copy it, double-click to edit it in iSnap, press and hold for Markup, drag it into any app or folder, or use its share button. Choose **Show on Hover**, **Always Show**, or **Hide**, and toggle it any time with `⌃⌥T`.
+
+<p align="center"><img src="docs/assets/screenshots/capture-line-live.png" width="820" alt="A live recording of captures hanging on the Capture Line"></p>
+
+### Share anywhere
+
+One Share menu on Capture Line cards, in the editor, and in the Library: AirDrop, Messages, Mail, every macOS share extension, **Open With** any app, copy the image, the file, or its path, or upload to Cloudflare R2, Google Drive, or DocVault and copy the link.
+
+### And more
+
+- **Text extraction (OCR)** on device with macOS Vision, English and Vietnamese
+- **Screenshot Library** with recent captures, quick open, reveal, and move to Trash
+- **Storage** overview with live sizes per folder and one-click **Clear Cache**
+- **Widgets** (small and medium) for recent screenshots
+- **English and Tiếng Việt** interface, switchable from the menu bar icon
+- PNG/JPEG export, quick save (`⌘S`), copy (`⌘C`), filename patterns, launch at login, and update checks
+
+| Hotkeyss | Text extraction | Storage |
+| --- | --- | --- |
+| <img src="docs/assets/screenshots/settings-hotkeys.png" alt="An exported image with a gradient frame"> | <img src="docs/assets/screenshots/ocr.png" alt="Extracted text"> | <img src="docs/assets/screenshots/settings-storage.png" alt="Storage settings"> |
 
 ## Requirements
 
-- macOS 14 or later
-- Xcode 16 or later (validated with the locally installed Xcode 27 SDK)
-- Screen Recording permission for display/window capture
+- macOS 14 Sonoma or later
+- Screen Recording permission for display and window capture
+- To build: Xcode 16 or later (validated with the Xcode 27 SDK) and [XcodeGen](https://github.com/yonaskolb/XcodeGen)
 
-## Build
+## Install and build
 
 ```bash
 swift build
 swift test
 ```
 
-For an Xcode application project:
+Build the app with Xcode:
 
 ```bash
 xcodegen generate
-xcodebuild -project iSnap.xcodeproj -scheme iSnap -configuration Debug build
+xcodebuild -project iSnap.xcodeproj -scheme iSnap -configuration Release build
 ```
 
-For reliable Screen Recording permission, sign the app with the configured Apple Development team and run a fixed copy from `/Applications/iSnap.app`. On first capture, macOS asks for access; enable iSnap under System Settings → Privacy & Security → Screen & System Audio Recording, then restart iSnap from its recovery alert. If an older ad-hoc build is still listed, reset only its stale record with `tccutil reset ScreenCapture dev.isnap.app` and grant the installed build once.
+Copy the built `iSnap.app` to `/Applications` and open it. For a stable Screen Recording permission, sign with your Apple Development team and always run the copy in Applications. On first capture macOS asks for access; enable iSnap under **System Settings → Privacy & Security → Screen & System Audio Recording**, then restart iSnap from its recovery alert. If an older ad-hoc build is still listed, reset only its record with `tccutil reset ScreenCapture dev.isnap.app`.
 
-## Architecture
+See the [user guide](docs/USER_GUIDE.md) for every feature and shortcut.
 
-The source is split into `App`, `Models`, `Services`, and `Views`. System operations are isolated behind native services; `EditorDocument` owns editable state; `ExportRenderer` is the single rendering path shared by preview, clipboard, and file export.
+## Project layout
+
+The source is split into `App`, `Models`, `Services`, and `Views`. System operations sit behind native services, `EditorDocument` owns the editable state, and `ExportRenderer` is the single rendering path for the preview, the clipboard, and exported files. More in [docs/architecture.md](docs/architecture.md).
+
+Documentation screenshots are rendered from the real views with demo data:
+
+```bash
+ISNAP_SHOTS_DIR=/tmp/isnap-shots ISNAP_DEMO_DIR=/path/to/demo-images swift test --filter MarketingShotsTests
+```
+
+## License and notices
+
+Third-party notices are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

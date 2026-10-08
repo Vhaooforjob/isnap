@@ -14,11 +14,15 @@ final class SettingsStore: ObservableObject {
     private static let disabledBackgroundDefaultMigrationKey =
         "settings.didDisableBackgroundByDefault.v1"
 
-    init(fileManager: FileManager = .default, userDefaults: UserDefaults = .standard) {
-        self.userDefaults = userDefaults
+    convenience init(fileManager: FileManager = .default, userDefaults: UserDefaults = .standard) {
         let base = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("iSnap", isDirectory: true)
-        fileURL = base.appendingPathComponent("settings.json")
+        self.init(fileURL: base.appendingPathComponent("settings.json"), userDefaults: userDefaults)
+    }
+
+    init(fileURL: URL, userDefaults: UserDefaults) {
+        self.userDefaults = userDefaults
+        self.fileURL = fileURL
         do {
             let data = try Data(contentsOf: fileURL)
             value = try JSONDecoder().decode(AppSettings.self, from: data)

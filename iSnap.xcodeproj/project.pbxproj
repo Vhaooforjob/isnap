@@ -44,6 +44,7 @@
 		A5C227677BF602D10C0D85F7 /* iSnapApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E156B8592D5FDC0BC59B970F /* iSnapApp.swift */; };
 		A8B36BBEA7571965B98A16A0 /* ScreenshotParserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F41911CE1EC6D36384417D58 /* ScreenshotParserService.swift */; };
 		B62CB0827A359E81CE35676C /* R2Uploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = F71C15F657D513B017279CBB /* R2Uploader.swift */; };
+		BB6B2056F61439D7D8710A4B /* MarketingShotsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A8B3051CB22B872C916957F /* MarketingShotsTests.swift */; };
 		CA07CB97BC7405924B7204B6 /* HotkeyRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3314986780D4490B760B9DF /* HotkeyRecorder.swift */; };
 		D00E2A4EC6A9C1E801671B6C /* CaptureLineController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CE03EE3F154DD5F6C664185 /* CaptureLineController.swift */; };
 		D2E00C0F4FDD80EAAA5755F4 /* CaptureLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B341224EE77FA8B53C1DAD1 /* CaptureLine.swift */; };
@@ -110,6 +111,7 @@
 		6954CAD6E4AEA51838697C22 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		6C7BDDE1C82A5FCDF032FE65 /* CaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureService.swift; sourceTree = "<group>"; };
 		78D7EBA03B07BA282654F1AF /* WidgetSnapshotService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshotService.swift; sourceTree = "<group>"; };
+		7A8B3051CB22B872C916957F /* MarketingShotsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketingShotsTests.swift; sourceTree = "<group>"; };
 		94E60C047181BABC8F0A0CD3 /* WindowPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPickerView.swift; sourceTree = "<group>"; };
 		A1D218FFEDB1F4757F90042A /* LibraryThumbnail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryThumbnail.swift; sourceTree = "<group>"; };
 		A3E5359B3D6BA8CB804FBFA9 /* CaptureLineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureLineTests.swift; sourceTree = "<group>"; };
@@ -294,6 +296,7 @@
 			isa = PBXGroup;
 			children = (
 				A3E5359B3D6BA8CB804FBFA9 /* CaptureLineTests.swift */,
+				7A8B3051CB22B872C916957F /* MarketingShotsTests.swift */,
 				6954CAD6E4AEA51838697C22 /* ModelTests.swift */,
 			);
 			path = iSnapTests;
@@ -499,6 +502,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5E68886067CFD1042751613E /* CaptureLineTests.swift in Sources */,
+				BB6B2056F61439D7D8710A4B /* MarketingShotsTests.swift in Sources */,
 				E700FAB0E3EEAA1345E30345 /* ModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

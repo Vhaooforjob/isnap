@@ -7,3 +7,4 @@ dist/
 xcuserdata/
 .swiftpm/
 Package.resolved
+brag-output*/
