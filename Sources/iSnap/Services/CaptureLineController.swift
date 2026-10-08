@@ -475,7 +475,7 @@ final class CaptureLineController: ObservableObject {
                     self.menuBarSuppressed = true
                     self.hotZoneSince = nil
                 }
-                guard self.line.isRevealed, !CaptureGrabView.isDragging,
+                guard self.line.isRevealed, !CaptureGrabView.isDragging, !CaptureGrabView.isShowingMenu,
                       inMenuBar || !self.isOverCard(point) else { return }
                 self.hide()
             }
@@ -556,7 +556,8 @@ final class CaptureLineController: ObservableObject {
         let inside = NSMouseInRect(mouse, zone, false)
         if inside && isPinned { isPinned = false }
 
-        let busy = isPinned || CaptureGrabView.isDragging || line.pressedID != nil || now < peekUntil
+        let busy = isPinned || CaptureGrabView.isDragging || CaptureGrabView.isShowingMenu
+            || line.pressedID != nil || now < peekUntil
         if inside || busy {
             awaySince = nil
         } else {

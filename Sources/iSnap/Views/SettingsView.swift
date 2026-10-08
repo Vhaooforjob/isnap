@@ -5,18 +5,19 @@ struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject var store: SettingsStore
     @Environment(\.dismiss) private var dismiss
-    @State private var tab = Tab.hotkeys
     @State private var r2AccessKey = ""
     @State private var r2SecretKey = ""
     @State private var googleClientID = ""
     @State private var googleClientSecret = ""
     @State private var language = AppLanguage.saved()
+    @State private var isConfirmingLineCleanup = false
 
     enum Tab: String, CaseIterable, Identifiable {
         case hotkeys = "Hotkeys"
         case startup = "Startup"
         case quickSave = "Quick Save"
         case captureLine = "Capture Line"
+        case storage = "Storage"
         case export = "Export"
         case updates = "Updates"
         case cloud = "Cloud"
@@ -27,6 +28,7 @@ struct SettingsView: View {
             case .startup: String(localized: "Startup")
             case .quickSave: String(localized: "Quick Save")
             case .captureLine: String(localized: "Capture Line")
+            case .storage: String(localized: "Storage")
             case .export: String(localized: "Export")
             case .updates: String(localized: "Updates")
             case .cloud: String(localized: "Cloud")
@@ -38,6 +40,7 @@ struct SettingsView: View {
             case .startup: "power"
             case .quickSave: "square.and.arrow.down"
             case .captureLine: "rectangle.3.group"
+            case .storage: "internaldrive"
             case .export: "photo"
             case .updates: "arrow.triangle.2.circlepath"
             case .cloud: "cloud"
@@ -47,17 +50,18 @@ struct SettingsView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            List(Tab.allCases, selection: $tab) { item in
+            List(Tab.allCases, selection: $model.settingsTab) { item in
                 Label(item.title, systemImage: item.symbol).tag(item)
             }
             .frame(width: 170)
             VStack(spacing: 0) {
                 Form {
-                    switch tab {
+                    switch model.settingsTab {
                     case .hotkeys: hotkeys
                     case .startup: startup
                     case .quickSave: quickSave
                     case .captureLine: captureLine
+                    case .storage: storage
                     case .export: export
                     case .updates: updates
                     case .cloud: cloud
@@ -81,8 +85,8 @@ struct SettingsView: View {
             googleClientID = KeychainStore.shared.value(for: .googleClientID) ?? ""
             googleClientSecret = KeychainStore.shared.value(for: .googleClientSecret) ?? ""
         }
-        .task(id: tab) {
-            guard tab == .cloud else { return }
+        .task(id: model.settingsTab) {
+            guard model.settingsTab == .cloud else { return }
             while !Task.isCancelled {
                 if model.docVaultConnected {
                     await model.refreshDocVault(showError: false)
@@ -207,6 +211,85 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
+    }
+
+    private var storage: some View {
+        Group {
+            Section {
+                if let usage = model.storageUsage {
+                    ForEach(usage.entries) { entry in
+                        LabeledContent {
+                            HStack(spacing: 8) {
+                                Text(StorageService.format(entry.bytes)).monospacedDigit()
+                                Button {
+                                    revealStorage(entry)
+                                } label: {
+                                    Image(systemName: "magnifyingglass")
+                                }
+                                .buttonStyle(.borderless)
+                                .help("Show in Finder")
+                            }
+                        } label: {
+                            Label(entry.kind.title, systemImage: entry.kind.symbol)
+                        }
+                    }
+                    LabeledContent("Total") {
+                        Text(StorageService.format(usage.total)).monospacedDigit().bold()
+                    }
+                } else {
+                    ProgressView().controlSize(.small)
+                }
+            } header: {
+                HStack {
+                    Text("Storage used by iSnap")
+                    Spacer()
+                    if model.isMeasuringStorage { ProgressView().controlSize(.small) }
+                    Button("Refresh") { Task { await model.refreshStorage() } }
+                        .disabled(model.isMeasuringStorage)
+                }
+            } footer: {
+                if let usage = model.storageUsage {
+                    Text("Measured at \(usage.measuredAt.formatted(date: .omitted, time: .standard)). Updates every 30 seconds while this page is open.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Section("Cache") {
+                LabeledContent("Cache and widget thumbnails") {
+                    Text(StorageService.format(model.storageUsage?.cacheBytes ?? 0)).monospacedDigit()
+                }
+                Button("Clear Cache", systemImage: "trash") { Task { await model.clearCache() } }
+                Text("Removes the network cache, the text recognition model cache, files prepared for sharing, and widget thumbnails. iSnap rebuilds them when needed. Screenshots, backgrounds, and settings are kept.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Capture Line files") {
+                LabeledContent("Line-only captures") {
+                    Text(StorageService.format(model.storageUsage?.bytes(for: .captureLine) ?? 0)).monospacedDigit()
+                }
+                Button("Move Capture Line Files to Trash…", systemImage: "rectangle.3.group", role: .destructive) {
+                    isConfirmingLineCleanup = true
+                }
+                Text("Clipboard screenshots and other captures that only live on the line. Library screenshots are not touched.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .confirmationDialog("Move Capture Line files to Trash?", isPresented: $isConfirmingLineCleanup) {
+            Button("Move to Trash", role: .destructive) { Task { await model.emptyCaptureLineFolder() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Cards for these captures are taken down. You can recover the files from the Trash.")
+        }
+        .task {
+            while !Task.isCancelled {
+                await model.refreshStorage()
+                try? await Task.sleep(for: .seconds(30))
+            }
+        }
+    }
+
+    private func revealStorage(_ entry: StorageUsage.Entry) {
+        let existing = entry.locations.filter { FileManager.default.fileExists(atPath: $0.path) }
+        guard !existing.isEmpty else { return NSSound.beep() }
+        NSWorkspace.shared.activateFileViewerSelecting(existing)
     }
 
     private var quickSave: some View {

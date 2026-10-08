@@ -85,13 +85,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         windowMenuItem = menu.addItem(withTitle: String(localized: "Capture Window"), action: #selector(captureWindow), keyEquivalent: "")
         menu.addItem(withTitle: String(localized: "Capture All Displays"), action: #selector(captureAll), keyEquivalent: "")
         menu.addItem(.separator())
-        menu.addItem(.sectionHeader(title: String(localized: "Capture Line")))
+        // Capture Line options live in a submenu, like Language.
+        let lineMenu = NSMenu()
         for visibility in CaptureLineVisibility.allCases {
-            let item = menu.addItem(withTitle: visibility.title, action: #selector(chooseLineVisibility(_:)), keyEquivalent: "")
+            let item = lineMenu.addItem(withTitle: visibility.title, action: #selector(chooseLineVisibility(_:)), keyEquivalent: "")
             item.representedObject = visibility.rawValue
         }
-        lineNowMenuItem = menu.addItem(withTitle: String(localized: "Show or Hide Now"), action: #selector(toggleCaptureLine), keyEquivalent: "")
-        menu.addItem(withTitle: String(localized: "Take Everything Down"), action: #selector(clearCaptureLine), keyEquivalent: "")
+        lineMenu.addItem(.separator())
+        lineNowMenuItem = lineMenu.addItem(withTitle: String(localized: "Show or Hide Now"), action: #selector(toggleCaptureLine), keyEquivalent: "")
+        lineMenu.addItem(withTitle: String(localized: "Take Everything Down"), action: #selector(clearCaptureLine), keyEquivalent: "")
+        for lineItem in lineMenu.items { lineItem.target = self }
+        lineMenu.delegate = self
+        let lineItem = NSMenuItem(title: String(localized: "Capture Line"), action: nil, keyEquivalent: "")
+        lineItem.submenu = lineMenu
+        menu.addItem(lineItem)
         menu.addItem(.separator())
         menu.addItem(withTitle: String(localized: "Screenshot Library"), action: #selector(showLibrary), keyEquivalent: "")
         menu.addItem(withTitle: String(localized: "Settings…"), action: #selector(showSettings), keyEquivalent: ",")
@@ -108,7 +115,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         menu.addItem(languageItem)
         menu.addItem(.separator())
         menu.addItem(withTitle: String(localized: "Quit iSnap"), action: #selector(quit), keyEquivalent: "q")
-        for menuItem in menu.items where !menuItem.isSectionHeader { menuItem.target = self }
+        for menuItem in menu.items where menuItem.submenu == nil { menuItem.target = self }
         menu.delegate = self
         item.menu = menu
         statusItem = item

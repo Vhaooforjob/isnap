@@ -60,6 +60,7 @@ struct ContentView: View {
             Spacer()
             if model.document.image != nil {
                 Button("Copy", systemImage: "doc.on.doc", action: model.copy)
+                Button("Share", systemImage: "square.and.arrow.up", action: model.shareEditedImage)
                 Button("Quick Save", systemImage: "bolt", action: model.quickSave)
                 Menu {
                     Button("Cloudflare R2") { Task { await model.upload(to: .r2) } }
@@ -72,7 +73,7 @@ struct ContentView: View {
                     Label(model.isUploading ? "Uploading…" : "Upload", systemImage: "icloud.and.arrow.up")
                 }
                 .disabled(model.isUploading || (!model.r2Connected && !model.googleDriveConnected))
-                Button("Export…", systemImage: "square.and.arrow.up", action: model.saveAs)
+                Button("Export…", systemImage: "square.and.arrow.down.on.square", action: model.saveAs)
             }
         }
         .font(.caption)

@@ -94,7 +94,7 @@ enum WidgetSnapshotService {
         }
     }
 
-    private static func widgetDirectories() -> [URL] {
+    static func widgetDirectories() -> [URL] {
         let fileManager = FileManager.default
         var directories: [URL] = []
         if let groupDirectory = fileManager.containerURL(

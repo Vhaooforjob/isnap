@@ -37,6 +37,7 @@ struct LibraryView: View {
                                 .onTapGesture(count: 2) { model.openLibraryItem(item) }
                                 .contextMenu {
                                     Button("Open in Editor") { model.openLibraryItem(item) }
+                                    Button("Share…") { model.showShareMenu(for: item.url) }
                                     Button("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([item.url]) }
                                     Divider()
                                     Button("Move to Trash", role: .destructive) { Task { await model.deleteLibraryItem(item) } }

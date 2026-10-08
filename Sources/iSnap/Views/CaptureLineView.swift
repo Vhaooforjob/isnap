@@ -159,6 +159,19 @@ private struct HangingCaptureView: View {
                     .scaleEffect(hovering ? 1 : 0.6)
                     .allowsHitTesting(false)
             }
+            .overlay(alignment: .topTrailing) {
+                // Share, mirroring the cross; also clicked through CaptureGrabView.
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.primary)
+                    .offset(y: -1)
+                    .frame(width: 20, height: 20)
+                    .captureLineGlass(circle: true)
+                    .padding(3)
+                    .opacity(hovering && !dragging ? 1 : 0)
+                    .scaleEffect(hovering ? 1 : 0.6)
+                    .allowsHitTesting(false)
+            }
             .overlay(CaptureGrabArea(item: item, line: line))
             .overlay(alignment: .bottom) {
                 if copied {
@@ -306,7 +319,7 @@ private extension View {
 /// - The Trash discards it.
 ///
 /// Click copies, double-click edits in iSnap, press and hold opens Markup,
-/// and the corner cross takes the card down.
+/// the top-left cross takes the card down, and the top-right button shares.
 private struct CaptureGrabArea: NSViewRepresentable {
     let item: HangingCapture
     let line: CaptureLine
@@ -340,11 +353,19 @@ private struct CaptureGrabArea: NSViewRepresentable {
         }
         view.onTrash = { line.trash(id) }
         view.onDiscard = { line.discard(id) }
+        let url = item.url
+        view.shareMenuProvider = { line.shareMenu?(url) }
         view.menuProvider = {
             let menu = NSMenu()
             menu.addItem(CaptureLineMenuItem("Copy") { line.copy(id) })
             menu.addItem(CaptureLineMenuItem("Edit in iSnap") { line.edit(id) })
             menu.addItem(CaptureLineMenuItem("Markup") { line.markup(id) })
+            if let share = line.shareMenu?(url) {
+                let shareItem = NSMenuItem(title: String(localized: "Share"), action: nil, keyEquivalent: "")
+                shareItem.image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: nil)
+                shareItem.submenu = share
+                menu.addItem(shareItem)
+            }
             menu.addItem(CaptureLineMenuItem("Open in Default App") { line.openExternally(id) })
             menu.addItem(CaptureLineMenuItem("Show in Finder") { line.reveal(id) })
             if isOwned {
@@ -364,6 +385,8 @@ private struct CaptureGrabArea: NSViewRepresentable {
 
 final class CaptureGrabView: NSView, NSDraggingSource {
     static var isDragging = false
+    /// A card's menu is open: the line must not tuck away underneath it.
+    static var isShowingMenu = false
 
     var url: URL?
     var dragImage: NSImage?
@@ -377,6 +400,7 @@ final class CaptureGrabView: NSView, NSDraggingSource {
     var onTrash: () -> Void = {}
     var onDiscard: () -> Void = {}
     var menuProvider: () -> NSMenu = { NSMenu() }
+    var shareMenuProvider: () -> NSMenu? = { nil }
 
     private var downPoint: NSPoint?
     private var startedDrag = false
@@ -390,21 +414,31 @@ final class CaptureGrabView: NSView, NSDraggingSource {
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    private func isInCross(_ event: NSEvent) -> Bool {
-        let point = convert(event.locationInWindow, from: nil)
-        let corner = NSRect(
-            x: 0,
+    private func corner(leading: Bool) -> NSRect {
+        NSRect(
+            x: leading ? 0 : bounds.width - Self.crossHitSize,
             y: isFlipped ? 0 : bounds.height - Self.crossHitSize,
             width: Self.crossHitSize,
             height: Self.crossHitSize
         )
-        return corner.contains(point)
+    }
+
+    private func isIn(_ corner: NSRect, _ event: NSEvent) -> Bool {
+        corner.contains(convert(event.locationInWindow, from: nil))
     }
 
     override func mouseDown(with event: NSEvent) {
-        if isInCross(event) {
+        if isIn(corner(leading: true), event) {
             downPoint = nil
             onDiscard()
+            return
+        }
+        if isIn(corner(leading: false), event), let menu = shareMenuProvider() {
+            downPoint = nil
+            let anchor = corner(leading: false)
+            show(menu) {
+                menu.popUp(positioning: nil, at: NSPoint(x: anchor.minX, y: isFlipped ? anchor.maxY : anchor.minY), in: self)
+            }
             return
         }
         if event.clickCount == 2 {
@@ -457,7 +491,15 @@ final class CaptureGrabView: NSView, NSDraggingSource {
     }
 
     override func rightMouseDown(with event: NSEvent) {
-        NSMenu.popUpContextMenu(menuProvider(), with: event, for: self)
+        let menu = menuProvider()
+        show(menu) { NSMenu.popUpContextMenu(menu, with: event, for: self) }
+    }
+
+    /// Menus track synchronously; the flag covers the whole time one is open.
+    private func show(_ menu: NSMenu, _ popUp: () -> Void) {
+        Self.isShowingMenu = true
+        defer { Self.isShowingMenu = false }
+        popUp()
     }
 
     // MARK: NSDraggingSource
@@ -502,6 +544,13 @@ final class CaptureLineMenuItem: NSMenuItem {
     init(_ title: String.LocalizationValue, key: String = "", handler: @escaping () -> Void) {
         self.handler = handler
         super.init(title: String(localized: title), action: #selector(fire), keyEquivalent: key)
+        target = self
+    }
+
+    /// A title that is already localized or is a name, such as an app's.
+    init(verbatim title: String, handler: @escaping () -> Void) {
+        self.handler = handler
+        super.init(title: title, action: #selector(fire), keyEquivalent: "")
         target = self
     }
 

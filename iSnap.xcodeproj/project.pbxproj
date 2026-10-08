@@ -55,6 +55,8 @@
 		E700FAB0E3EEAA1345E30345 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6954CAD6E4AEA51838697C22 /* ModelTests.swift */; };
 		E7FAB9A6A0C507ED58853CB3 /* UpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D0E2B012B7735EEFE989D4 /* UpdateService.swift */; };
 		FAE6E319DB64EB696744FFB7 /* Annotation.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E1C235EFE48826EF27FDFC /* Annotation.swift */; };
+		FB734BFA8A817A1D510F84AC /* ShareService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF5FFC7ECB1B9EFC5CC2BDD2 /* ShareService.swift */; };
+		FE03288B3D723A8B277126CE /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6BCB0D9504E80A1B7DC7F25 /* StorageService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -121,11 +123,13 @@
 		B67308BEE94DF7F1E071C0C0 /* RegionCaptureCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionCaptureCoordinator.swift; sourceTree = "<group>"; };
 		B96AEFFAAB052D21741F65A3 /* AuthenticationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AuthenticationServices.framework; path = System/Library/Frameworks/AuthenticationServices.framework; sourceTree = SDKROOT; };
 		BD1A797C735C7F5C0862ACDF /* iSnapWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iSnapWidget.swift; sourceTree = "<group>"; };
+		BF5FFC7ECB1B9EFC5CC2BDD2 /* ShareService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareService.swift; sourceTree = "<group>"; };
 		C08C18A5472D1A93520DED2E /* iSnap.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iSnap.entitlements; sourceTree = "<group>"; };
 		C0D0E2B012B7735EEFE989D4 /* UpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateService.swift; sourceTree = "<group>"; };
 		C4E1C235EFE48826EF27FDFC /* Annotation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Annotation.swift; sourceTree = "<group>"; };
 		C4FBBE69F12DAB55855A47FD /* ScreenshotFolderWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotFolderWatcher.swift; sourceTree = "<group>"; };
 		C6B9EFE2FBE13614773D91E7 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		C6BCB0D9504E80A1B7DC7F25 /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
 		CC2A93D0FE31F3EA6449DCE8 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		D3314986780D4490B760B9DF /* HotkeyRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyRecorder.swift; sourceTree = "<group>"; };
 		D506797C070E47973B3CD13B /* SystemMarkupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemMarkupService.swift; sourceTree = "<group>"; };
@@ -257,6 +261,8 @@
 				C4FBBE69F12DAB55855A47FD /* ScreenshotFolderWatcher.swift */,
 				F41911CE1EC6D36384417D58 /* ScreenshotParserService.swift */,
 				598F5D57AFA8754D6B0FEA39 /* SettingsStore.swift */,
+				BF5FFC7ECB1B9EFC5CC2BDD2 /* ShareService.swift */,
+				C6BCB0D9504E80A1B7DC7F25 /* StorageService.swift */,
 				D506797C070E47973B3CD13B /* SystemMarkupService.swift */,
 				C0D0E2B012B7735EEFE989D4 /* UpdateService.swift */,
 				78D7EBA03B07BA282654F1AF /* WidgetSnapshotService.swift */,
@@ -401,6 +407,7 @@
 			knownRegions = (
 				Base,
 				en,
+				vi,
 			);
 			mainGroup = A57DD72FA3B96D40722A4103;
 			minimizedProjectReferenceProxies = 1;
@@ -477,6 +484,8 @@
 				A8B36BBEA7571965B98A16A0 /* ScreenshotParserService.swift in Sources */,
 				DF00FE7AB936C04E3AA72A39 /* SettingsStore.swift in Sources */,
 				2C2A8951D883C85E29BB6E65 /* SettingsView.swift in Sources */,
+				FB734BFA8A817A1D510F84AC /* ShareService.swift in Sources */,
+				FE03288B3D723A8B277126CE /* StorageService.swift in Sources */,
 				4A8BDDA26D3D07E001FD6B82 /* SystemMarkupService.swift in Sources */,
 				E7FAB9A6A0C507ED58853CB3 /* UpdateService.swift in Sources */,
 				257D0EE3B9DAB946B13A25CA /* WidgetSnapshotService.swift in Sources */,

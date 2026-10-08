@@ -170,6 +170,43 @@ final class CaptureLineTests: XCTestCase {
         XCTAssertEqual(item.keyEquivalent, "")
     }
 
+    func testStorageMeasuresNestedFoldersAndSingleFiles() throws {
+        let folder = root.appendingPathComponent("Measure/Nested", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try Data(count: 5_000).write(to: folder.appendingPathComponent("a.bin"))
+        let single = root.appendingPathComponent("single.bin")
+        try Data(count: 2_000).write(to: single)
+
+        XCTAssertGreaterThanOrEqual(StorageService.size(of: root.appendingPathComponent("Measure")), 5_000)
+        XCTAssertGreaterThanOrEqual(StorageService.size(of: single), 2_000)
+        XCTAssertEqual(StorageService.size(of: root.appendingPathComponent("missing")), 0)
+
+        let usage = StorageService.measure([.library: [root.appendingPathComponent("Measure")], .cache: [single]])
+        XCTAssertEqual(usage.entries.map(\.kind), StorageKind.allCases)
+        XCTAssertEqual(usage.total, usage.bytes(for: .library) + usage.bytes(for: .cache))
+        XCTAssertEqual(usage.cacheBytes, usage.bytes(for: .cache))
+        XCTAssertFalse(StorageKind.library.isCache)
+        XCTAssertFalse(StorageKind.captureLine.isCache)
+    }
+
+    func testShareMenuOffersOpenWithCopiesAndUploads() throws {
+        let url = try fixture("share.png")
+        var uploaded = false
+        let menu = ShareService.menu(for: url, uploads: [
+            .init(title: "Ready", isAvailable: true) { uploaded = true },
+            .init(title: "Offline", isAvailable: false) {}
+        ])
+        let titles = menu.items.map(\.title)
+        XCTAssertTrue(titles.contains("Copy Image"))
+        XCTAssertTrue(titles.contains("Copy File"))
+        XCTAssertNotNil(menu.items.first { $0.title == "Open With" }?.submenu)
+        let uploads = try XCTUnwrap(menu.items.first { $0.title == "Upload and Copy Link" }?.submenu)
+        XCTAssertEqual(uploads.items.map(\.isEnabled), [true, false])
+        let ready = try XCTUnwrap(uploads.items.first as? CaptureLineMenuItem)
+        _ = ready.target?.perform(ready.action)
+        XCTAssertTrue(uploaded)
+    }
+
     private func fixture(_ name: String) throws -> URL {
         let url = root.appendingPathComponent(name)
         guard let context = CGContext(

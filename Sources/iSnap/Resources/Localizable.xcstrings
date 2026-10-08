@@ -12,6 +12,16 @@
         }
       }
     },
+    "%@ (default)": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (mặc định)"
+          }
+        }
+      }
+    },
     "%@ could not be opened.": {
       "localizations": {
         "vi": {
@@ -398,6 +408,36 @@
         }
       }
     },
+    "Cache": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bộ nhớ đệm"
+          }
+        }
+      }
+    },
+    "Cache and widget thumbnails": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bộ nhớ đệm và ảnh thu nhỏ của widget"
+          }
+        }
+      }
+    },
+    "Cache cleared": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã xoá bộ nhớ đệm"
+          }
+        }
+      }
+    },
     "Cancel": {
       "localizations": {
         "vi": {
@@ -455,6 +495,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dây ảnh"
+          }
+        }
+      }
+    },
+    "Capture Line files": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File của Dây ảnh"
           }
         }
       }
@@ -680,6 +730,16 @@
         }
       }
     },
+    "Cards for these captures are taken down. You can recover the files from the Trash.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Các ảnh này sẽ được gỡ khỏi dây. Bạn có thể khôi phục file từ Thùng rác."
+          }
+        }
+      }
+    },
     "Celebrate": {
       "extractionState": "manual",
       "localizations": {
@@ -771,6 +831,16 @@
         }
       }
     },
+    "Choose an App": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chọn ứng dụng"
+          }
+        }
+      }
+    },
     "Clap": {
       "extractionState": "manual",
       "localizations": {
@@ -789,6 +859,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tinh khôi"
+          }
+        }
+      }
+    },
+    "Clear Cache": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xoá bộ nhớ đệm"
+          }
+        }
+      }
+    },
+    "Cleared %@ of cache": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã xoá %@ bộ nhớ đệm"
           }
         }
       }
@@ -819,6 +909,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bộ nhớ tạm"
+          }
+        }
+      }
+    },
+    "Clipboard screenshots and other captures that only live on the line. Library screenshots are not touched.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ảnh chụp vào bộ nhớ tạm và các ảnh khác chỉ nằm trên dây. Ảnh trong Thư viện không bị ảnh hưởng."
           }
         }
       }
@@ -985,6 +1085,36 @@
         }
       }
     },
+    "Copy File": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sao chép file"
+          }
+        }
+      }
+    },
+    "Copy Image": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sao chép ảnh"
+          }
+        }
+      }
+    },
+    "Copy Path": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sao chép đường dẫn"
+          }
+        }
+      }
+    },
     "Copy Text": {
       "localizations": {
         "vi": {
@@ -1102,6 +1232,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Phiên bản hiện tại: %@"
+          }
+        }
+      }
+    },
+    "Custom Backgrounds": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ảnh nền tuỳ chỉnh"
           }
         }
       }
@@ -1976,6 +2116,16 @@
         }
       }
     },
+    "Line-only captures": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ảnh chỉ nằm trên dây"
+          }
+        }
+      }
+    },
     "Loading windows…": {
       "localizations": {
         "vi": {
@@ -2039,6 +2189,16 @@
         }
       }
     },
+    "Measured at %@. Updates every 30 seconds while this page is open.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đo lúc %@. Tự cập nhật mỗi 30 giây khi trang này đang mở."
+          }
+        }
+      }
+    },
     "Midnight": {
       "extractionState": "manual",
       "localizations": {
@@ -2057,6 +2217,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bạc hà"
+          }
+        }
+      }
+    },
+    "More Sharing Options": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tuỳ chọn chia sẻ khác"
           }
         }
       }
@@ -2091,6 +2261,26 @@
         }
       }
     },
+    "Move Capture Line Files to Trash…": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chuyển file của Dây ảnh vào Thùng rác…"
+          }
+        }
+      }
+    },
+    "Move Capture Line files to Trash?": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chuyển file của Dây ảnh vào Thùng rác?"
+          }
+        }
+      }
+    },
     "Move all screenshots to Trash?": {
       "localizations": {
         "vi": {
@@ -2117,6 +2307,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Đã chuyển %@ vào Thùng rác"
+          }
+        }
+      }
+    },
+    "Moved %lld Capture Line files to Trash": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã chuyển %lld file của Dây ảnh vào Thùng rác"
           }
         }
       }
@@ -2395,6 +2595,16 @@
         }
       }
     },
+    "Open With": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mở bằng"
+          }
+        }
+      }
+    },
     "Open in Default App": {
       "localizations": {
         "vi": {
@@ -2421,6 +2631,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mở trình chỉnh sửa sau mỗi lần chụp"
+          }
+        }
+      }
+    },
+    "Other…": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Khác…"
           }
         }
       }
@@ -2674,6 +2894,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gỡ bỏ"
+          }
+        }
+      }
+    },
+    "Removes the network cache, the text recognition model cache, files prepared for sharing, and widget thumbnails. iSnap rebuilds them when needed. Screenshots, backgrounds, and settings are kept.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xoá bộ nhớ đệm mạng, bộ nhớ đệm mô hình nhận dạng chữ, các file đã chuẩn bị để chia sẻ và ảnh thu nhỏ của widget. iSnap sẽ tạo lại khi cần. Ảnh chụp, ảnh nền và cài đặt được giữ nguyên."
           }
         }
       }
@@ -3010,6 +3240,36 @@
         }
       }
     },
+    "Share": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chia sẻ"
+          }
+        }
+      }
+    },
+    "Share with AirDrop, Messages, Mail, another app, or a cloud link": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chia sẻ qua AirDrop, Tin nhắn, Mail, ứng dụng khác hoặc liên kết đám mây"
+          }
+        }
+      }
+    },
+    "Share…": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chia sẻ…"
+          }
+        }
+      }
+    },
     "Show background": {
       "localizations": {
         "vi": {
@@ -3231,6 +3491,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sticker"
+          }
+        }
+      }
+    },
+    "Storage": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dung lượng"
+          }
+        }
+      }
+    },
+    "Storage used by iSnap": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dung lượng iSnap đang dùng"
           }
         }
       }
@@ -3593,6 +3873,16 @@
         }
       }
     },
+    "Total": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tổng"
+          }
+        }
+      }
+    },
     "Try Again": {
       "localizations": {
         "vi": {
@@ -3669,6 +3959,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tải lên"
+          }
+        }
+      }
+    },
+    "Upload and Copy Link": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tải lên và sao chép liên kết"
           }
         }
       }
@@ -3821,6 +4121,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Độ dày"
+          }
+        }
+      }
+    },
+    "Widget Thumbnails": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ảnh thu nhỏ của widget"
           }
         }
       }

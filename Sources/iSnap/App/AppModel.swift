@@ -18,6 +18,7 @@ final class AppModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isShowingScreenRecordingRecovery = false
     @Published var isShowingSettings = false
+    @Published var settingsTab = SettingsView.Tab.hotkeys
     @Published var isShowingWindowPicker = false
     @Published var availableWindows: [CapturableWindow] = []
     @Published var libraryItems: [LibraryItem] = []
@@ -34,6 +35,8 @@ final class AppModel: ObservableObject {
     @Published var docVaultWorkspaces: [DocVaultWorkspace] = []
     @Published var docVaultAccounts: [DocVaultStorageAccount] = []
     @Published var isRefreshingDocVault = false
+    @Published var storageUsage: StorageUsage?
+    @Published var isMeasuringStorage = false
 
     let document = EditorDocument()
     let settings = SettingsStore()
@@ -66,6 +69,10 @@ final class AppModel: ObservableObject {
         captureLine.onEdit = { [weak self] url in
             self?.editCapture(at: url)
         }
+        captureLine.shareMenu = { [weak self] url in
+            self?.shareMenu(for: url) ?? NSMenu()
+        }
+        Task { await refreshStorage() }
         hotkeys.register(settings.value.hotkeys)
         Task {
             r2Connected = await r2Uploader.isConfigured(settings.value.cloud.r2)
@@ -510,8 +517,9 @@ final class AppModel: ObservableObject {
         } catch { report(error) }
     }
 
-    enum CloudProvider { case r2, googleDrive, docVault }
+    enum CloudProvider: CaseIterable { case r2, googleDrive, docVault }
 
+    /// Uploads the edited image.
     func upload(to provider: CloudProvider) async {
         guard !isUploading else { return }
         isUploading = true
@@ -520,23 +528,121 @@ final class AppModel: ObservableObject {
             let format = settings.value.export.defaultFormat
             let image = try exportService.render(document: document, includeBackground: settings.value.export.includeBackground)
             let data = try exportService.encode(image, format: format, quality: settings.value.export.jpegQuality)
-            let filename = "iSnap-\(Self.uploadTimestamp.string(from: Date())).\(format.fileExtension)"
-            statusText = String(localized: "Uploading…")
-            let url: URL
-            switch provider {
-            case .r2:
-                url = try await r2Uploader.upload(data, filename: filename, config: settings.value.cloud.r2)
-            case .googleDrive:
-                url = try await googleDriveUploader.upload(data, filename: filename, folderID: settings.value.cloud.googleDrive.folderID)
-            case .docVault:
-                url = try await docVaultService.upload(data, filename: filename, config: settings.value.cloud.docVault)
-                await refreshDocVault(showError: false)
-            }
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(url.absoluteString, forType: .string)
-            statusText = String(localized: "Uploaded; link copied")
+            try await upload(data, fileExtension: format.fileExtension, to: provider)
         } catch { report(error) }
         isUploading = false
+    }
+
+    /// Uploads a file as it is, for example a Capture Line card or a Library item.
+    func uploadFile(at url: URL, to provider: CloudProvider) async {
+        guard !isUploading else { return }
+        isUploading = true
+        do {
+            let data = try Data(contentsOf: url)
+            let fileExtension = url.pathExtension.isEmpty ? "png" : url.pathExtension.lowercased()
+            try await upload(data, fileExtension: fileExtension, to: provider)
+        } catch { report(error) }
+        isUploading = false
+    }
+
+    private func upload(_ data: Data, fileExtension: String, to provider: CloudProvider) async throws {
+        let filename = "iSnap-\(Self.uploadTimestamp.string(from: Date())).\(fileExtension)"
+        statusText = String(localized: "Uploading…")
+        let url: URL
+        switch provider {
+        case .r2:
+            url = try await r2Uploader.upload(data, filename: filename, config: settings.value.cloud.r2)
+        case .googleDrive:
+            url = try await googleDriveUploader.upload(data, filename: filename, folderID: settings.value.cloud.googleDrive.folderID)
+        case .docVault:
+            url = try await docVaultService.upload(data, filename: filename, config: settings.value.cloud.docVault)
+            await refreshDocVault(showError: false)
+        }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(url.absoluteString, forType: .string)
+        statusText = String(localized: "Uploaded; link copied")
+    }
+
+    private func isAvailable(_ provider: CloudProvider) -> Bool {
+        switch provider {
+        case .r2: r2Connected
+        case .googleDrive: googleDriveConnected
+        case .docVault: docVaultConnected && !settings.value.cloud.docVault.workspaceID.isEmpty
+        }
+    }
+
+    private func title(of provider: CloudProvider) -> String {
+        switch provider {
+        case .r2: "Cloudflare R2"
+        case .googleDrive: "Google Drive"
+        case .docVault: "DocVault"
+        }
+    }
+
+    // MARK: Sharing
+
+    /// The Share menu for a file on disk.
+    func shareMenu(for url: URL) -> NSMenu {
+        let uploads = CloudProvider.allCases.map { provider in
+            ShareService.UploadTarget(title: title(of: provider), isAvailable: isAvailable(provider) && !isUploading) { [weak self] in
+                Task { await self?.uploadFile(at: url, to: provider) }
+            }
+        }
+        return ShareService.menu(for: url, uploads: uploads)
+    }
+
+    func showShareMenu(for url: URL) {
+        ShareService.popUpAtPointer(shareMenu(for: url))
+    }
+
+    /// Renders the edited image to a file and offers the Share menu for it.
+    func shareEditedImage() {
+        do {
+            let format = settings.value.export.defaultFormat
+            let image = try exportService.render(document: document, includeBackground: settings.value.export.includeBackground)
+            let data = try exportService.encode(image, format: format, quality: settings.value.export.jpegQuality)
+            showShareMenu(for: try ShareService.prepareFile(data, fileExtension: format.fileExtension))
+        } catch { report(error) }
+    }
+
+    // MARK: Storage
+
+    func refreshStorage() async {
+        guard !isMeasuringStorage else { return }
+        isMeasuringStorage = true
+        let locations = StorageService.locations(
+            libraryFolder: settings.value.quickSave.folder,
+            lineFolder: captureLine.ownedFolder
+        )
+        storageUsage = await Task.detached(priority: .utility) { StorageService.measure(locations) }.value
+        isMeasuringStorage = false
+    }
+
+    /// Clears everything iSnap can rebuild; screenshots and settings stay.
+    func clearCache() async {
+        let before = storageUsage?.cacheBytes
+        await Task.detached(priority: .userInitiated) { StorageService.clearCache() }.value
+        await ThumbnailCache.shared.removeAll()
+        await reloadLibrary()
+        await refreshStorage()
+        if let before, let after = storageUsage?.cacheBytes {
+            statusText = String(localized: "Cleared \(StorageService.format(max(0, before - after))) of cache")
+        } else {
+            statusText = String(localized: "Cache cleared")
+        }
+    }
+
+    /// Moves every line-only capture to the Trash and takes those cards down.
+    func emptyCaptureLineFolder() async {
+        let folder = captureLine.ownedFolder
+        let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        var moved = 0
+        for file in files where (try? FileManager.default.trashItem(at: file, resultingItemURL: nil)) != nil {
+            moved += 1
+        }
+        captureLine.prune()
+        await refreshStorage()
+        statusText = String(localized: "Moved \(moved) Capture Line files to Trash")
     }
 
     /// - Parameters:
