@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		03C7F1B5AAAA80CA1C1173E2 /* iSnapWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD1A797C735C7F5C0862ACDF /* iSnapWidget.swift */; };
 		05935E9E231E6907F996FDA9 /* DocVaultService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA5B380A52118C99DCD766E8 /* DocVaultService.swift */; };
+		0797966117A9C4AA63E34D84 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 2A88EA21CE0C1228ED5ED6A5 /* Localizable.xcstrings */; };
 		131C9462160D353BEA43A7B2 /* BackgroundImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6706D240A38FDEC286D91A80 /* BackgroundImageStore.swift */; };
 		157B08AE03A0D18833D5AAB3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 12D381E5CF53D210141C7703 /* Assets.xcassets */; };
 		15C85B90980F4B6361A5B273 /* ImageIOService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AED1B9660E1D2F3E2E62A471 /* ImageIOService.swift */; };
@@ -16,6 +17,7 @@
 		237587E31DFFDFDBD6B57CFF /* ExportRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1234496FB9B35E4851BE1EA /* ExportRenderer.swift */; };
 		257D0EE3B9DAB946B13A25CA /* WidgetSnapshotService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78D7EBA03B07BA282654F1AF /* WidgetSnapshotService.swift */; };
 		2C2A8951D883C85E29BB6E65 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F69C342602FADCD08FA79C86 /* SettingsView.swift */; };
+		2F0371B537ADA42E5E513DE7 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDE93310F636424CB72CBB7D /* AppLanguage.swift */; };
 		30AD25CD9F318BC1CEABA35B /* GoogleDriveUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D0658D45F80E9E554807C7F /* GoogleDriveUploader.swift */; };
 		31639E4FC5F895213DCFEF34 /* ScreenshotParseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A526904CA570FB8F6AE5543A /* ScreenshotParseView.swift */; };
 		333D7D755E2418135E5008FC /* LaunchAtLoginService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DCF65C7C004ABFEA3E6CE57 /* LaunchAtLoginService.swift */; };
@@ -92,6 +94,7 @@
 		0CE03EE3F154DD5F6C664185 /* CaptureLineController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureLineController.swift; sourceTree = "<group>"; };
 		12D381E5CF53D210141C7703 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		13F4542855F351174EA72549 /* EditorDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorDocument.swift; sourceTree = "<group>"; };
+		2A88EA21CE0C1228ED5ED6A5 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		2B341224EE77FA8B53C1DAD1 /* CaptureLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureLine.swift; sourceTree = "<group>"; };
 		3948BEC76FA8E00817E48D1C /* iSnap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iSnap.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4066868EBB2AE982131057E6 /* iSnapWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iSnapWidget.entitlements; sourceTree = "<group>"; };
@@ -127,6 +130,7 @@
 		D3314986780D4490B760B9DF /* HotkeyRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyRecorder.swift; sourceTree = "<group>"; };
 		D506797C070E47973B3CD13B /* SystemMarkupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemMarkupService.swift; sourceTree = "<group>"; };
 		DA5B380A52118C99DCD766E8 /* DocVaultService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocVaultService.swift; sourceTree = "<group>"; };
+		DDE93310F636424CB72CBB7D /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
 		E1234496FB9B35E4851BE1EA /* ExportRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportRenderer.swift; sourceTree = "<group>"; };
 		E156B8592D5FDC0BC59B970F /* iSnapApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iSnapApp.swift; sourceTree = "<group>"; };
 		E180622294AFBA0095853257 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -224,6 +228,7 @@
 			isa = PBXGroup;
 			children = (
 				C4E1C235EFE48826EF27FDFC /* Annotation.swift */,
+				DDE93310F636424CB72CBB7D /* AppLanguage.swift */,
 				AA3C42CB2810DF5639845FBE /* AppModels.swift */,
 				C6B9EFE2FBE13614773D91E7 /* AppSettings.swift */,
 				2B341224EE77FA8B53C1DAD1 /* CaptureLine.swift */,
@@ -293,6 +298,7 @@
 			children = (
 				AEBD899AB2B5EC9ACCB30641 /* Info.plist */,
 				C08C18A5472D1A93520DED2E /* iSnap.entitlements */,
+				2A88EA21CE0C1228ED5ED6A5 /* Localizable.xcstrings */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -416,6 +422,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				157B08AE03A0D18833D5AAB3 /* Assets.xcassets in Resources */,
+				0797966117A9C4AA63E34D84 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -436,6 +443,7 @@
 			files = (
 				FAE6E319DB64EB696744FFB7 /* Annotation.swift in Sources */,
 				1DADBF2769BA64770BAD5FAD /* AnnotationToolbar.swift in Sources */,
+				2F0371B537ADA42E5E513DE7 /* AppLanguage.swift in Sources */,
 				8C7A15F4A7473B33883DA427 /* AppModel.swift in Sources */,
 				D529B6522AA18B6F6475C195 /* AppModels.swift in Sources */,
 				E4468B47CE961D9C101694D1 /* AppSettings.swift in Sources */,
@@ -514,9 +522,11 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.isnap.app;
 				PRODUCT_NAME = iSnap;
 				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 			};
 			name = Debug;
 		};
@@ -650,9 +660,11 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.isnap.app;
 				PRODUCT_NAME = iSnap;
 				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 			};
 			name = Release;
 		};

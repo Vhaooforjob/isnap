@@ -118,6 +118,58 @@ final class CaptureLineTests: XCTestCase {
         )
     }
 
+    func testLanguageChoiceIsSavedAsAppleLanguagesOverride() {
+        XCTAssertEqual(AppLanguage.saved(in: defaults, bundleID: suiteName), .system)
+        AppLanguage.save(.vietnamese, in: defaults)
+        XCTAssertEqual(defaults.stringArray(forKey: "AppleLanguages"), ["vi"])
+        XCTAssertEqual(AppLanguage.saved(in: defaults, bundleID: suiteName), .vietnamese)
+        AppLanguage.save(.english, in: defaults)
+        XCTAssertEqual(AppLanguage.saved(in: defaults, bundleID: suiteName), .english)
+        AppLanguage.save(.system, in: defaults)
+        XCTAssertEqual(AppLanguage.saved(in: defaults, bundleID: suiteName), .system)
+    }
+
+    func testCaptureModesKeepHotkeyOrderAndAddAllDisplays() {
+        XCTAssertEqual(CaptureMode.allCases, [.fullScreen, .region, .window, .allDisplays])
+        XCTAssertEqual(Set(CaptureMode.allCases.map(\.symbol)).count, CaptureMode.allCases.count)
+    }
+
+    func testClipboardScreenshotDetectionAcceptsOnlyBarePNG() {
+        XCTAssertTrue(ClipboardScreenshotWatcher.looksLikeScreenshot([[.png]]))
+        // iSnap's own card copy adds a file URL; apps add TIFF, HTML and more.
+        XCTAssertFalse(ClipboardScreenshotWatcher.looksLikeScreenshot([[.png, .fileURL]]))
+        XCTAssertFalse(ClipboardScreenshotWatcher.looksLikeScreenshot([[.tiff, .png]]))
+        XCTAssertFalse(ClipboardScreenshotWatcher.looksLikeScreenshot([[.png], [.png]]))
+        XCTAssertFalse(ClipboardScreenshotWatcher.looksLikeScreenshot([]))
+    }
+
+    func testVisibilityMigratesFromLegacyFlags() throws {
+        func decode(_ json: String) throws -> AppSettings.CaptureLineSettings {
+            try JSONDecoder().decode(AppSettings.CaptureLineSettings.self, from: Data(json.utf8))
+        }
+        XCTAssertEqual(try decode(#"{"revealsFromMenuBar":true}"#).visibility, .onHover)
+        XCTAssertEqual(try decode(#"{"keepsVisible":true}"#).visibility, .always)
+        XCTAssertEqual(try decode(#"{"revealsFromMenuBar":false}"#).visibility, .hidden)
+        XCTAssertEqual(try decode(#"{"visibility":"hidden","keepsVisible":true}"#).visibility, .hidden)
+        XCTAssertTrue(try decode("{}").hangsClipboardScreenshots)
+
+        // Only the new key is written back.
+        let encoded = try JSONEncoder().encode(try decode(#"{"keepsVisible":true}"#))
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        XCTAssertEqual(object["visibility"] as? String, "always")
+        XCTAssertNil(object["keepsVisible"])
+        XCTAssertNil(object["revealsFromMenuBar"])
+    }
+
+    func testMenuShortcutParsingForStatusMenu() {
+        let item = NSMenuItem()
+        item.showShortcut("⌃⌥1")
+        XCTAssertEqual(item.keyEquivalent, "1")
+        XCTAssertEqual(item.keyEquivalentModifierMask, [.control, .option])
+        item.showShortcut("not a shortcut")
+        XCTAssertEqual(item.keyEquivalent, "")
+    }
+
     private func fixture(_ name: String) throws -> URL {
         let url = root.appendingPathComponent(name)
         guard let context = CGContext(

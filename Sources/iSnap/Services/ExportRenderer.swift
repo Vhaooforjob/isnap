@@ -15,8 +15,8 @@ enum ExportError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidImage: "The current image cannot be rendered."
-        case .encodingFailed: "The rendered image could not be encoded."
+        case .invalidImage: String(localized: "The current image cannot be rendered.")
+        case .encodingFailed: String(localized: "The rendered image could not be encoded.")
         }
     }
 }

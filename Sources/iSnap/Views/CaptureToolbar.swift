@@ -12,7 +12,7 @@ struct CaptureToolbar: View {
                     Label(mode.title, systemImage: mode.symbol)
                 }
                 .disabled(model.isCapturing)
-                .help("Capture \(mode.title.lowercased())")
+                .help(mode.help)
             }
             Divider().frame(height: 20)
             Button(action: model.openImage) { Label("Open", systemImage: "folder") }

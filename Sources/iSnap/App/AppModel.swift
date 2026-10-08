@@ -9,11 +9,12 @@ final class AppModel: ObservableObject {
         case library = "Library"
         var id: String { rawValue }
         var symbol: String { self == .editor ? "photo.on.rectangle.angled" : "photo.stack" }
+        var title: String { self == .editor ? String(localized: "Editor") : String(localized: "Library") }
     }
 
     @Published var section = Section.editor
     @Published var isCapturing = false
-    @Published var statusText = "Ready"
+    @Published var statusText = String(localized: "Ready")
     @Published var errorMessage: String?
     @Published var isShowingScreenRecordingRecovery = false
     @Published var isShowingSettings = false
@@ -25,7 +26,7 @@ final class AppModel: ObservableObject {
     @Published var isParsingScreenshot = false
     @Published var isShowingParsedData = false
     @Published var recognizedText = ""
-    @Published var recognizedSourceName = "Screenshot"
+    @Published var recognizedSourceName = String(localized: "Screenshot")
     @Published var r2Connected = false
     @Published var googleDriveConnected = false
     @Published var docVaultConnected = false
@@ -88,16 +89,27 @@ final class AppModel: ObservableObject {
             return
         }
         isCapturing = true
-        statusText = "Capturing…"
+        statusText = String(localized: "Capturing…")
         do {
             let result: CaptureResult
             var origin: CGRect?
             switch mode {
             case .fullScreen:
+                // Decide before hiding: the screen the user is pointing at.
+                guard let screen = NSScreen.underPointer, let displayID = screen.displayID else {
+                    throw CaptureError.displayUnavailable
+                }
+                NSApp.hide(nil)
+                try await Task.sleep(for: .milliseconds(180))
+                result = try await captureService.capture(displayID: displayID)
+                origin = screen.frame
+                NSApp.unhide(nil)
+            case .allDisplays:
+                let screen = NSScreen.underPointer
                 NSApp.hide(nil)
                 try await Task.sleep(for: .milliseconds(180))
                 result = try await captureService.captureAllDisplays()
-                origin = (NSScreen.main ?? NSScreen.screens.first)?.frame
+                origin = screen?.frame
                 NSApp.unhide(nil)
             case .region:
                 let visibleWindows = NSApp.windows.filter { $0.isVisible && !($0 is NSPanel) }
@@ -119,7 +131,7 @@ final class AppModel: ObservableObject {
             }
             accept(result, isCapture: true, capturedFrom: origin)
         } catch CaptureError.cancelled {
-            statusText = "Capture cancelled"
+            statusText = String(localized: "Capture cancelled")
         } catch {
             NSApp.unhide(nil)
             report(error)
@@ -129,11 +141,11 @@ final class AppModel: ObservableObject {
 
     func loadWindows() async {
         isCapturing = true
-        statusText = "Loading windows…"
+        statusText = String(localized: "Loading windows…")
         do {
             availableWindows = try await captureService.windows()
             isShowingWindowPicker = true
-            statusText = "Choose a window"
+            statusText = String(localized: "Choose a window")
             presentMainWindow?()
         } catch { report(error) }
         isCapturing = false
@@ -165,20 +177,20 @@ final class AppModel: ObservableObject {
 
     func pasteImage() {
         guard let image = NSImage(pasteboard: .general) else {
-            errorMessage = "The clipboard does not contain an image."
+            errorMessage = String(localized: "The clipboard does not contain an image.")
             return
         }
-        accept(CaptureResult(image: image, sourceName: "Clipboard"))
+        accept(CaptureResult(image: image, sourceName: String(localized: "Clipboard")))
     }
 
     func parseScreenshot() async {
         guard !isParsingScreenshot, let image = document.image,
               let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-            if document.image == nil { errorMessage = "Capture or open an image before extracting text." }
+            if document.image == nil { errorMessage = String(localized: "Capture or open an image before extracting text.") }
             return
         }
         isParsingScreenshot = true
-        statusText = "Extracting text with macOS Vision…"
+        statusText = String(localized: "Extracting text with macOS Vision…")
         defer { isParsingScreenshot = false }
 
         do {
@@ -188,11 +200,13 @@ final class AppModel: ObservableObject {
             recognizedSourceName = document.sourceName
             isShowingParsedData = true
             statusText = result.lineCount == 0
-                ? "No text detected"
-                : "Extracted \(result.lineCount) text \(result.lineCount == 1 ? "line" : "lines")"
+                ? String(localized: "No text detected")
+                : result.lineCount == 1
+                    ? String(localized: "Extracted 1 text line")
+                    : String(localized: "Extracted \(result.lineCount) text lines")
             presentMainWindow?()
         } catch is CancellationError {
-            statusText = "Text extraction cancelled"
+            statusText = String(localized: "Text extraction cancelled")
         } catch {
             report(error)
         }
@@ -200,7 +214,7 @@ final class AppModel: ObservableObject {
 
     func insertOverlayImage() {
         guard document.image != nil else {
-            errorMessage = "Capture or open an image before inserting an overlay."
+            errorMessage = String(localized: "Capture or open an image before inserting an overlay.")
             return
         }
         let panel = NSOpenPanel()
@@ -235,13 +249,13 @@ final class AppModel: ObservableObject {
             annotation.imageData = data
             annotation.imageOpacity = 1
             document.add(annotation)
-            statusText = "Inserted \(url.lastPathComponent)"
+            statusText = String(localized: "Inserted \(url.lastPathComponent)")
         } catch { report(error) }
     }
 
     func insertSticker(_ sticker: StickerPreset) {
         guard document.image != nil else {
-            errorMessage = "Capture or open an image before adding a sticker."
+            errorMessage = String(localized: "Capture or open an image before adding a sticker.")
             return
         }
         do {
@@ -260,7 +274,7 @@ final class AppModel: ObservableObject {
             annotation.imageData = data
             annotation.imageOpacity = 1
             document.add(annotation)
-            statusText = "Added \(sticker.name) sticker"
+            statusText = String(localized: "Added \(sticker.localizedName) sticker")
         } catch { report(error) }
     }
 
@@ -268,7 +282,7 @@ final class AppModel: ObservableObject {
         do {
             settings.value.canvas = document.canvas
             let url = try exportService.quickSave(document: document, settings: settings.value)
-            statusText = "Saved \(url.lastPathComponent)"
+            statusText = String(localized: "Saved \(url.lastPathComponent)")
             Task { await reloadLibrary() }
         } catch { report(error) }
     }
@@ -277,7 +291,7 @@ final class AppModel: ObservableObject {
         do {
             settings.value.canvas = document.canvas
             if let url = try exportService.saveAs(document: document, settings: settings.value) {
-                statusText = "Exported \(url.lastPathComponent)"
+                statusText = String(localized: "Exported \(url.lastPathComponent)")
             }
         } catch { report(error) }
     }
@@ -285,7 +299,7 @@ final class AppModel: ObservableObject {
     func copy() {
         do {
             try exportService.copy(document: document, includeBackground: settings.value.export.includeBackground)
-            statusText = "Copied to clipboard"
+            statusText = String(localized: "Copied to clipboard")
         } catch { report(error) }
     }
 
@@ -312,7 +326,7 @@ final class AppModel: ObservableObject {
             try await libraryService.delete(item, rootFolder: settings.value.quickSave.folder)
             captureLine.prune()
             await reloadLibrary()
-            statusText = "Moved \(item.name) to Trash"
+            statusText = String(localized: "Moved \(item.name) to Trash")
         } catch { report(error) }
     }
 
@@ -321,7 +335,7 @@ final class AppModel: ObservableObject {
             let count = try await libraryService.deleteAll(in: settings.value.quickSave.folder)
             captureLine.prune()
             await reloadLibrary()
-            statusText = count == 1 ? "Moved 1 screenshot to Trash" : "Moved \(count) screenshots to Trash"
+            statusText = count == 1 ? String(localized: "Moved 1 screenshot to Trash") : String(localized: "Moved \(count) screenshots to Trash")
         } catch {
             await reloadLibrary()
             report(error)
@@ -342,8 +356,14 @@ final class AppModel: ObservableObject {
         captureLineController.shutdown()
     }
 
+    /// Show or hide the line right now, from a menu; the global shortcut
+    /// toggles the controller directly.
     func toggleCaptureLine() {
-        captureLineController.toggle()
+        captureLineController.toggleFromMenu()
+    }
+
+    func setCaptureLineVisibility(_ visibility: CaptureLineVisibility) {
+        settings.value.captureLine.visibility = visibility
     }
 
     func clearCaptureLine() {
@@ -353,7 +373,7 @@ final class AppModel: ObservableObject {
     /// Double-click or "Edit in iSnap" on a hanging capture.
     func editCapture(at url: URL) {
         guard let image = NSImage(contentsOf: url) else {
-            errorMessage = "\(url.lastPathComponent) could not be opened."
+            errorMessage = String(localized: "\(url.lastPathComponent) could not be opened.")
             return
         }
         loadIntoEditor(CaptureResult(image: image, sourceName: url.lastPathComponent))
@@ -367,8 +387,24 @@ final class AppModel: ObservableObject {
                 releaseInfo = release
             }
         } catch {
-            statusText = "Could not check for updates"
+            statusText = String(localized: "Could not check for updates")
         }
+    }
+
+    /// Saves the interface language and offers to relaunch, which is when
+    /// macOS loads the new localization.
+    func setLanguage(_ language: AppLanguage) {
+        guard language != AppLanguage.saved() else { return }
+        AppLanguage.save(language)
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Restart iSnap to change the language?")
+        alert.informativeText = document.image == nil
+            ? String(localized: "The new language is used the next time iSnap opens.")
+            : String(localized: "The new language is used the next time iSnap opens. Unsaved edits in the editor will be lost if you restart now.")
+        alert.addButton(withTitle: String(localized: "Restart Now"))
+        alert.addButton(withTitle: String(localized: "Later"))
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn { restartApplication() }
     }
 
     func openScreenRecordingSettings() {
@@ -396,10 +432,10 @@ final class AppModel: ObservableObject {
     func configureR2(accessKeyID: String, secretAccessKey: String) async {
         do {
             try await r2Uploader.saveCredentials(accessKeyID: accessKeyID, secretAccessKey: secretAccessKey)
-            statusText = "Testing Cloudflare R2…"
+            statusText = String(localized: "Testing Cloudflare R2…")
             try await r2Uploader.test(settings.value.cloud.r2)
             r2Connected = true
-            statusText = "Cloudflare R2 connected"
+            statusText = String(localized: "Cloudflare R2 connected")
         } catch {
             r2Connected = false
             report(error)
@@ -409,10 +445,10 @@ final class AppModel: ObservableObject {
     func connectGoogleDrive(clientID: String, clientSecret: String) async {
         do {
             try await googleDriveUploader.saveCredentials(clientID: clientID, clientSecret: clientSecret)
-            statusText = "Waiting for Google authorization…"
+            statusText = String(localized: "Waiting for Google authorization…")
             try await googleDriveUploader.authorize()
             googleDriveConnected = true
-            statusText = "Google Drive connected"
+            statusText = String(localized: "Google Drive connected")
         } catch { report(error) }
     }
 
@@ -420,7 +456,7 @@ final class AppModel: ObservableObject {
         do {
             try await googleDriveUploader.disconnect()
             googleDriveConnected = false
-            statusText = "Google Drive disconnected"
+            statusText = String(localized: "Google Drive disconnected")
         } catch { report(error) }
     }
 
@@ -431,13 +467,13 @@ final class AppModel: ObservableObject {
     func connectDocVault() async {
         guard !isRefreshingDocVault else { return }
         isRefreshingDocVault = true
-        statusText = "Waiting for DocVault sign-in…"
+        statusText = String(localized: "Waiting for DocVault sign-in…")
         defer { isRefreshingDocVault = false }
         do {
             let snapshot = try await docVaultService.connect(config: settings.value.cloud.docVault)
             applyDocVault(snapshot)
             docVaultConnected = true
-            statusText = "DocVault connected"
+            statusText = String(localized: "DocVault connected")
         } catch { report(error) }
     }
 
@@ -448,7 +484,7 @@ final class AppModel: ObservableObject {
             docVaultUser = nil
             docVaultWorkspaces = []
             docVaultAccounts = []
-            statusText = "DocVault disconnected"
+            statusText = String(localized: "DocVault disconnected")
         } catch { report(error) }
     }
 
@@ -470,7 +506,7 @@ final class AppModel: ObservableObject {
         do {
             _ = try await docVaultService.setDefaultStorageAccount(accountID, config: settings.value.cloud.docVault)
             await refreshDocVault()
-            statusText = "DocVault storage account updated"
+            statusText = String(localized: "DocVault storage account updated")
         } catch { report(error) }
     }
 
@@ -479,13 +515,13 @@ final class AppModel: ObservableObject {
     func upload(to provider: CloudProvider) async {
         guard !isUploading else { return }
         isUploading = true
-        statusText = "Rendering upload…"
+        statusText = String(localized: "Rendering upload…")
         do {
             let format = settings.value.export.defaultFormat
             let image = try exportService.render(document: document, includeBackground: settings.value.export.includeBackground)
             let data = try exportService.encode(image, format: format, quality: settings.value.export.jpegQuality)
             let filename = "iSnap-\(Self.uploadTimestamp.string(from: Date())).\(format.fileExtension)"
-            statusText = "Uploading…"
+            statusText = String(localized: "Uploading…")
             let url: URL
             switch provider {
             case .r2:
@@ -498,7 +534,7 @@ final class AppModel: ObservableObject {
             }
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(url.absoluteString, forType: .string)
-            statusText = "Uploaded; link copied"
+            statusText = String(localized: "Uploaded; link copied")
         } catch { report(error) }
         isUploading = false
     }
@@ -512,11 +548,11 @@ final class AppModel: ObservableObject {
         if !hangsOnLine || lineSettings.opensEditorAfterCapture {
             loadIntoEditor(result)
         } else {
-            statusText = "Captured • Hanging on the Capture Line"
+            statusText = String(localized: "Captured • Hanging on the Capture Line")
         }
         let archives = settings.value.quickSave.autoSaveCaptures
         guard archives || hangsOnLine else { return }
-        if archives { statusText = "Captured • Saving to Library…" }
+        if archives { statusText = String(localized: "Captured • Saving to Library…") }
         Task { [weak self] in
             await Task.yield()
             guard let self else { return }
@@ -526,11 +562,11 @@ final class AppModel: ObservableObject {
                 let archived = try exportService.archiveCapture(result.image, in: folder)
                 if hangsOnLine { captureLineController.hang(archived, from: origin) }
                 if archives {
-                    statusText = "Captured and saved \(archived.lastPathComponent)"
+                    statusText = String(localized: "Captured and saved \(archived.lastPathComponent)")
                     await reloadLibrary()
                 }
             } catch {
-                statusText = archives ? "Captured • Library save failed" : "Captured • Capture Line save failed"
+                statusText = archives ? String(localized: "Captured • Library save failed") : String(localized: "Captured • Capture Line save failed")
             }
         }
     }
@@ -541,16 +577,14 @@ final class AppModel: ObservableObject {
         isShowingParsedData = false
         document.canvas = settings.value.canvas
         section = .editor
-        statusText = "\(Int(document.imagePixelSize.width)) × \(Int(document.imagePixelSize.height)) px"
+        statusText = String(localized: "\(Int(document.imagePixelSize.width)) × \(Int(document.imagePixelSize.height)) px")
         presentMainWindow?()
     }
 
     /// A region selection is display-local with a top-left origin; the
     /// Capture Line needs it in AppKit screen coordinates.
     private static func screenRect(of selection: ScreenSelection) -> CGRect? {
-        guard let screen = NSScreen.screens.first(where: {
-            ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID) == selection.displayID
-        }) else { return nil }
+        guard let screen = NSScreen.screens.first(where: { $0.displayID == selection.displayID }) else { return nil }
         return CGRect(
             x: screen.frame.minX + selection.rect.minX,
             y: screen.frame.maxY - selection.rect.minY - selection.rect.height,
@@ -563,11 +597,11 @@ final class AppModel: ObservableObject {
         if let captureError = error as? CaptureError,
            case .permissionDenied = captureError {
             isShowingScreenRecordingRecovery = true
-            statusText = "Screen Recording access needs attention"
+            statusText = String(localized: "Screen Recording access needs attention")
             return
         }
         errorMessage = error.localizedDescription
-        statusText = "Failed"
+        statusText = String(localized: "Failed")
     }
 
     private func applyDocVault(_ snapshot: DocVaultSnapshot) {

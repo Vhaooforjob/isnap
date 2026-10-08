@@ -30,3 +30,7 @@ Inserted overlay images are PNG-backed `Annotation` values, so selection, transf
 System services remain independent from SwiftUI views. This keeps Screen Recording permission, file access, hotkey registration, and launch-at-login behavior testable and replaceable.
 
 The Capture Line is a second destination for captures. `AppModel.accept` archives each fresh capture (to the Library, or to the line's own folder when archiving is off) and hands the file plus its on-screen origin to `CaptureLineController`, which owns the floating panel, pointer tracking, full-screen detection, and the optional macOS screenshot routing. `CaptureLine` only references files; double-click returns a file to `EditorDocument` through `AppModel.editCapture(at:)`.
+
+Localization uses `Sources/iSnap/Resources/Localizable.xcstrings` (English source, Vietnamese translations). SwiftUI literals are localized automatically; status messages, errors, enum titles, and AppKit menus go through `String(localized:)`. `AppLanguage` stores the user's choice in iSnap's own `AppleLanguages` default and the app relaunches to apply it. After adding UI strings, build with Xcode (`SWIFT_EMIT_LOC_STRINGS=YES`) and run `xcrun xcstringstool sync Sources/iSnap/Resources/Localizable.xcstrings --stringsdata <DerivedData>/**/*.stringsdata` to add the new keys, then translate them.
+
+Display capture matches `SCDisplay` and `NSScreen` by display ID, never by frame: ScreenCaptureKit frames use a top-left origin and AppKit frames a bottom-left one, so frames only agree on the main display.

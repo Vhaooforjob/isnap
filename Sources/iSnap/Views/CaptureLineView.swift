@@ -499,9 +499,9 @@ final class CaptureGrabView: NSView, NSDraggingSource {
 final class CaptureLineMenuItem: NSMenuItem {
     private let handler: () -> Void
 
-    init(_ title: String, key: String = "", handler: @escaping () -> Void) {
+    init(_ title: String.LocalizationValue, key: String = "", handler: @escaping () -> Void) {
         self.handler = handler
-        super.init(title: title, action: #selector(fire), keyEquivalent: key)
+        super.init(title: String(localized: title), action: #selector(fire), keyEquivalent: key)
         target = self
     }
 

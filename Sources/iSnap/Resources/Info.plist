@@ -4,6 +4,11 @@
 <dict>
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>vi</string>
+    </array>
     <key>CFBundleDisplayName</key>
     <string>iSnap</string>
     <key>CFBundleExecutable</key>
@@ -17,9 +22,9 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-	<string>0.3.1</string>
+	<string>0.3.4</string>
     <key>CFBundleVersion</key>
-	<string>13</string>
+	<string>17</string>
     <key>CFBundleURLTypes</key>
     <array>
         <dict>

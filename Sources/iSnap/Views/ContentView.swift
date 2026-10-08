@@ -35,7 +35,7 @@ struct ContentView: View {
             set: { if !$0 { model.errorMessage = nil } }
         )) {
             Button("OK", role: .cancel) { model.errorMessage = nil }
-        } message: { Text(model.errorMessage ?? "Unknown error") }
+        } message: { Text(model.errorMessage ?? String(localized: "Unknown error")) }
         .alert("Screen Recording Access", isPresented: $model.isShowingScreenRecordingRecovery) {
             Button("Restart iSnap") { model.restartApplication() }
             Button("Open System Settings") { model.openScreenRecordingSettings() }
@@ -46,7 +46,7 @@ struct ContentView: View {
         .alert(item: $model.releaseInfo) { release in
             Alert(
                 title: Text("iSnap \(release.tagName) is available"),
-                message: Text(release.body ?? "A newer version is ready to download."),
+                message: Text(release.body ?? String(localized: "A newer version is ready to download.")),
                 primaryButton: .default(Text("Open Download")) { NSWorkspace.shared.open(release.htmlURL) },
                 secondaryButton: .cancel()
             )
@@ -126,14 +126,14 @@ private struct QuickAccessBar: View {
             model.section = section
         } label: {
             Label(
-                section == .library ? "Library \(model.libraryItems.count)" : section.rawValue,
+                section == .library ? String(localized: "Library \(model.libraryItems.count)") : section.title,
                 systemImage: section.symbol
             )
         }
         .buttonStyle(.bordered)
         .controlSize(.small)
         .tint(model.section == section ? .accentColor : nil)
-        .help("Open \(section.rawValue)")
+        .help(String(localized: "Open \(section.title)"))
     }
 }
 

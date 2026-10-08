@@ -6,7 +6,7 @@ iSnap is a native macOS screenshot editor inspired by the workflows and feature 
 
 ## Current feature set
 
-- Capture all displays, a dragged region, or a selected application window
+- Capture the screen under the pointer (`⌃⌥1`), a dragged region on any display (`⌃⌥2`), a selected application window (`⌃⌥3`), or all displays stitched into one image
 - Automatically reopen the editor after capture and archive captures into the screenshot library
 - Menu-bar actions plus configurable global capture and editor keyboard shortcuts
 - Native annotation canvas: rectangle, ellipse, arrow, line, popup text editing, numeric/alphabetic markers, and spotlight
@@ -21,7 +21,8 @@ iSnap is a native macOS screenshot editor inspired by the workflows and feature 
 - PNG/JPEG export, quick save with `⌘S`, rendered-image copy with `⌘C`, clipboard import/export, and filename patterns
 - On-device screenshot text extraction with macOS Vision, including Vietnamese and English recognition
 - Capture Line: recent captures hang on a line tucked under the menu bar; rest the pointer in the menu bar (or press `⌃⌥T`) to bring it down. Click to copy, double-click to edit in iSnap, press and hold for Markup, drag into apps or folders, drag to Trash or click the cross to take down. New captures fly up to the line; the line hides during full-screen apps
-- Optional pickup of macOS screenshots (`⇧⌘3/4/5`) onto the Capture Line, with an opt-in mode that keeps them off the Desktop and restores the original screenshot settings on quit
+- Optional pickup of macOS screenshots (`⇧⌘3/4/5`) onto the Capture Line, following the save location set in `⇧⌘5`, with an opt-in mode that keeps them off the Desktop and restores the original screenshot settings on quit. Screenshots copied to the clipboard (`⌃⇧⌘3/4`) are saved to the line folder and hung too. Three display modes, chosen from the menu bar icon or Settings: Show on Hover (rest the pointer in the menu bar), Always Show, and Hide. `⌃⌥T` shows or hides it right away in any mode, and the menu bar icon lists every capture shortcut
+- English and Vietnamese interface, switchable in Settings → Startup or from the menu bar icon (iSnap relaunches to apply)
 - Recent-screenshot quick access with one-click Editor/Library navigation and move-to-Trash actions
 - Native macOS small and medium widgets for recent screenshots and quick Editor/Library access
 - Screenshot library with open, reveal, individual delete, and confirmed delete-all actions

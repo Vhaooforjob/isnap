@@ -28,7 +28,7 @@ struct iSnapApp: App {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDelegate {
     weak var model: AppModel? {
         didSet {
             model?.presentMainWindow = { [weak self] in self?.showApp() }
@@ -40,6 +40,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
     private var statusItem: NSStatusItem?
+    private var screenMenuItem: NSMenuItem?
+    private var regionMenuItem: NSMenuItem?
+    private var windowMenuItem: NSMenuItem?
+    private var lineNowMenuItem: NSMenuItem?
     private var mainWindow: NSWindow?
     private var appliedStartupVisibility = false
     private var pendingDeepLinks: [URL] = []
@@ -74,22 +78,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = NSImage(systemSymbolName: "camera.viewfinder", accessibilityDescription: "iSnap")
         let menu = NSMenu()
-        menu.addItem(withTitle: "Show iSnap", action: #selector(showApp), keyEquivalent: "")
+        menu.addItem(withTitle: String(localized: "Show iSnap"), action: #selector(showApp), keyEquivalent: "")
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Capture All Displays", action: #selector(captureAll), keyEquivalent: "")
-        menu.addItem(withTitle: "Capture Region", action: #selector(captureRegion), keyEquivalent: "")
-        menu.addItem(withTitle: "Capture Window", action: #selector(captureWindow), keyEquivalent: "")
+        screenMenuItem = menu.addItem(withTitle: String(localized: "Capture Screen"), action: #selector(captureScreen), keyEquivalent: "")
+        regionMenuItem = menu.addItem(withTitle: String(localized: "Capture Region"), action: #selector(captureRegion), keyEquivalent: "")
+        windowMenuItem = menu.addItem(withTitle: String(localized: "Capture Window"), action: #selector(captureWindow), keyEquivalent: "")
+        menu.addItem(withTitle: String(localized: "Capture All Displays"), action: #selector(captureAll), keyEquivalent: "")
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Show or Hide Capture Line", action: #selector(toggleCaptureLine), keyEquivalent: "")
-        menu.addItem(withTitle: "Take Everything Down", action: #selector(clearCaptureLine), keyEquivalent: "")
+        menu.addItem(.sectionHeader(title: String(localized: "Capture Line")))
+        for visibility in CaptureLineVisibility.allCases {
+            let item = menu.addItem(withTitle: visibility.title, action: #selector(chooseLineVisibility(_:)), keyEquivalent: "")
+            item.representedObject = visibility.rawValue
+        }
+        lineNowMenuItem = menu.addItem(withTitle: String(localized: "Show or Hide Now"), action: #selector(toggleCaptureLine), keyEquivalent: "")
+        menu.addItem(withTitle: String(localized: "Take Everything Down"), action: #selector(clearCaptureLine), keyEquivalent: "")
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Screenshot Library", action: #selector(showLibrary), keyEquivalent: "")
-        menu.addItem(withTitle: "Settings…", action: #selector(showSettings), keyEquivalent: ",")
+        menu.addItem(withTitle: String(localized: "Screenshot Library"), action: #selector(showLibrary), keyEquivalent: "")
+        menu.addItem(withTitle: String(localized: "Settings…"), action: #selector(showSettings), keyEquivalent: ",")
+        let languageItem = NSMenuItem(title: String(localized: "Language"), action: nil, keyEquivalent: "")
+        let languageMenu = NSMenu()
+        for language in AppLanguage.allCases {
+            let item = NSMenuItem(title: language.title, action: #selector(chooseLanguage(_:)), keyEquivalent: "")
+            item.representedObject = language.rawValue
+            item.target = self
+            languageMenu.addItem(item)
+        }
+        languageMenu.delegate = self
+        languageItem.submenu = languageMenu
+        menu.addItem(languageItem)
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit iSnap", action: #selector(quit), keyEquivalent: "q")
-        for menuItem in menu.items { menuItem.target = self }
+        menu.addItem(withTitle: String(localized: "Quit iSnap"), action: #selector(quit), keyEquivalent: "q")
+        for menuItem in menu.items where !menuItem.isSectionHeader { menuItem.target = self }
+        menu.delegate = self
         item.menu = menu
         statusItem = item
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        let saved = AppLanguage.saved()
+        for item in menu.items where item.action == #selector(chooseLanguage(_:)) {
+            item.state = (item.representedObject as? String) == saved.rawValue ? .on : .off
+        }
+        guard let settings = model?.settings.value else { return }
+        let visibility = settings.captureLine.visibility.rawValue
+        for item in menu.items where item.action == #selector(chooseLineVisibility(_:)) {
+            item.state = (item.representedObject as? String) == visibility ? .on : .off
+        }
+        // Shortcuts follow whatever is recorded in Settings.
+        screenMenuItem?.showShortcut(settings.hotkeys.fullScreen)
+        regionMenuItem?.showShortcut(settings.hotkeys.region)
+        windowMenuItem?.showShortcut(settings.hotkeys.window)
+        lineNowMenuItem?.showShortcut(settings.hotkeys.toggleCaptureLine)
     }
 
     func registerMainWindow(_ window: NSWindow) {
@@ -116,11 +155,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    @objc private func captureAll() { Task { await model?.capture(.fullScreen) } }
+    @objc private func captureScreen() { Task { await model?.capture(.fullScreen) } }
+    @objc private func captureAll() { Task { await model?.capture(.allDisplays) } }
     @objc private func captureRegion() { Task { await model?.capture(.region) } }
     @objc private func captureWindow() { Task { await model?.capture(.window) } }
 
     @objc private func toggleCaptureLine() { model?.toggleCaptureLine() }
+    @objc private func chooseLineVisibility(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String,
+              let visibility = CaptureLineVisibility(rawValue: raw) else { return }
+        model?.setCaptureLineVisibility(visibility)
+    }
+    @objc private func chooseLanguage(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let language = AppLanguage(rawValue: raw) else { return }
+        model?.setLanguage(language)
+    }
     @objc private func clearCaptureLine() { model?.clearCaptureLine() }
 
     @objc private func showLibrary() {
@@ -238,14 +287,21 @@ private struct iSnapCommands: Commands {
             Button("Crop Tool") { model.document.tool = .crop }.keyboardShortcut("c", modifiers: [])
         }
         CommandMenu("Capture") {
-            Button("All Displays") { Task { await model.capture(.fullScreen) } }
+            Button("Screen Under Pointer") { Task { await model.capture(.fullScreen) } }
             Button("Region") { Task { await model.capture(.region) } }
             Button("Window") { Task { await model.capture(.window) } }
+            Button("All Displays") { Task { await model.capture(.allDisplays) } }
             Divider()
             Button("Extract Text from Screenshot") { Task { await model.parseScreenshot() } }
                 .disabled(model.document.image == nil || model.isParsingScreenshot)
             Divider()
-            Button("Show or Hide Capture Line", action: model.toggleCaptureLine)
+            Picker("Capture Line", selection: Binding(
+                get: { settings.value.captureLine.visibility },
+                set: { model.setCaptureLineVisibility($0) }
+            )) {
+                ForEach(CaptureLineVisibility.allCases) { Text($0.title).tag($0) }
+            }
+            Button("Show or Hide Capture Line Now", action: model.toggleCaptureLine)
             Button("Take Everything Down", action: model.clearCaptureLine)
         }
     }

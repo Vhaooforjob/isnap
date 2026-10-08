@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var r2SecretKey = ""
     @State private var googleClientID = ""
     @State private var googleClientSecret = ""
+    @State private var language = AppLanguage.saved()
 
     enum Tab: String, CaseIterable, Identifiable {
         case hotkeys = "Hotkeys"
@@ -20,6 +21,17 @@ struct SettingsView: View {
         case updates = "Updates"
         case cloud = "Cloud"
         var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .hotkeys: String(localized: "Hotkeys")
+            case .startup: String(localized: "Startup")
+            case .quickSave: String(localized: "Quick Save")
+            case .captureLine: String(localized: "Capture Line")
+            case .export: String(localized: "Export")
+            case .updates: String(localized: "Updates")
+            case .cloud: String(localized: "Cloud")
+            }
+        }
         var symbol: String {
             switch self {
             case .hotkeys: "keyboard"
@@ -36,7 +48,7 @@ struct SettingsView: View {
     var body: some View {
         HStack(spacing: 0) {
             List(Tab.allCases, selection: $tab) { item in
-                Label(item.rawValue, systemImage: item.symbol).tag(item)
+                Label(item.title, systemImage: item.symbol).tag(item)
             }
             .frame(width: 170)
             VStack(spacing: 0) {
@@ -87,7 +99,7 @@ struct SettingsView: View {
     private var hotkeys: some View {
         Group {
             Section("Global capture shortcuts") {
-                LabeledContent("All displays") {
+                LabeledContent("Screen under pointer") {
                     HotkeyRecorder(shortcut: setting(\.hotkeys.fullScreen))
                 }
                 LabeledContent("Region") {
@@ -114,21 +126,36 @@ struct SettingsView: View {
     }
 
     private var startup: some View {
-        Section("Application behavior") {
-            Toggle("Launch iSnap at login", isOn: Binding(
-                get: { store.value.startup.launchAtLogin },
-                set: { enabled in
-                    do {
-                        try LaunchAtLoginService.setEnabled(enabled)
-                        store.value.startup.launchAtLogin = enabled
-                    } catch { model.errorMessage = error.localizedDescription }
+        Group {
+            Section("Language") {
+                Picker("Language", selection: Binding(
+                    get: { language },
+                    set: { value in
+                        language = value
+                        model.setLanguage(value)
+                    }
+                )) {
+                    ForEach(AppLanguage.allCases) { Text($0.title).tag($0) }
                 }
-            ))
-            Toggle("Start hidden", isOn: setting(\.startup.startHidden))
-            Toggle("Close to menu bar", isOn: setting(\.startup.closeToMenuBar))
-            Toggle("Play sound after save", isOn: setting(\.startup.showNotifications))
-            Text("Launch at login works after iSnap.app is placed in Applications. macOS may require approval in System Settings → General → Login Items.")
-                .font(.caption).foregroundStyle(.secondary)
+                Text("iSnap restarts to switch language. The language can also be changed from the menu bar icon.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Application behavior") {
+                Toggle("Launch iSnap at login", isOn: Binding(
+                    get: { store.value.startup.launchAtLogin },
+                    set: { enabled in
+                        do {
+                            try LaunchAtLoginService.setEnabled(enabled)
+                            store.value.startup.launchAtLogin = enabled
+                        } catch { model.errorMessage = error.localizedDescription }
+                    }
+                ))
+                Toggle("Start hidden", isOn: setting(\.startup.startHidden))
+                Toggle("Close to menu bar", isOn: setting(\.startup.closeToMenuBar))
+                Toggle("Play sound after save", isOn: setting(\.startup.showNotifications))
+                Text("Launch at login works after iSnap.app is placed in Applications. macOS may require approval in System Settings → General → Login Items.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -138,17 +165,39 @@ struct SettingsView: View {
                 Toggle("Hang new captures on a line under the menu bar", isOn: setting(\.captureLine.isEnabled))
                 Toggle("Open the editor after each capture", isOn: setting(\.captureLine.opensEditorAfterCapture))
                     .disabled(!store.value.captureLine.isEnabled)
-                Toggle("Reveal the line when the pointer rests in the menu bar", isOn: setting(\.captureLine.revealsFromMenuBar))
-                    .disabled(!store.value.captureLine.isEnabled)
+                Picker("Show the line", selection: setting(\.captureLine.visibility)) {
+                    ForEach(CaptureLineVisibility.allCases) { Text($0.title).tag($0) }
+                }
+                .disabled(!store.value.captureLine.isEnabled)
+                Group {
+                    switch store.value.captureLine.visibility {
+                    case .onHover:
+                        Text("Rest the pointer in the menu bar to bring the line down; it goes back up when the pointer moves away. New captures show for a moment.")
+                    case .always:
+                        Text("The line stays down while it has captures.")
+                    case .hidden:
+                        Text("The line never comes down on its own, not even from the menu bar. New captures still hang on it.")
+                    }
+                }
+                .font(.caption).foregroundStyle(.secondary)
+                Text("The Show or Hide shortcut brings the line down or puts it away right now in any mode.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Toggle("Play sounds", isOn: setting(\.captureLine.playsSounds))
                     .disabled(!store.value.captureLine.isEnabled)
             }
             Section("macOS screenshots") {
                 Toggle("Also hang screenshots taken with ⇧⌘3, ⇧⌘4 and ⇧⌘5", isOn: setting(\.captureLine.hangsSystemScreenshots))
                     .disabled(!store.value.captureLine.isEnabled)
-                Toggle("Keep them off the Desktop", isOn: setting(\.captureLine.routesSystemScreenshots))
+                if store.value.captureLine.isEnabled && store.value.captureLine.hangsSystemScreenshots {
+                    CaptureLineSourceStatus(controller: model.captureLineController)
+                }
+                Toggle("Keep them off the Desktop and hang them instantly", isOn: setting(\.captureLine.routesSystemScreenshots))
                     .disabled(!store.value.captureLine.isEnabled || !store.value.captureLine.hangsSystemScreenshots)
-                Text("Turns off the floating thumbnail and saves new macOS screenshots to iSnap's line folder, the same options found in ⇧⌘5. Drag one to a folder to keep it. Your previous settings come back when this is turned off or iSnap quits.")
+                Text("With the floating thumbnail on, macOS only writes the file when the thumbnail disappears, about 5 seconds later. This option turns the thumbnail off and saves new macOS screenshots to iSnap's line folder, the same options found in ⇧⌘5. Drag one to a folder to keep it. Your previous settings come back when this is turned off or iSnap quits.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle("Also hang screenshots copied to the clipboard (⌃⇧⌘3, ⌃⇧⌘4)", isOn: setting(\.captureLine.hangsClipboardScreenshots))
+                    .disabled(!store.value.captureLine.isEnabled)
+                Text("Clipboard screenshots are saved to iSnap's line folder and stay on the clipboard. macOS may ask once whether iSnap can paste from other apps.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Gestures") {
@@ -170,7 +219,7 @@ struct SettingsView: View {
                 if panel.runModal() == .OK, let url = panel.url { store.value.quickSave.folder = url }
             }
             Picker("Filename", selection: setting(\.quickSave.pattern)) {
-                ForEach(FilenamePattern.allCases) { Text($0.rawValue.capitalized).tag($0) }
+                ForEach(FilenamePattern.allCases) { Text($0.title).tag($0) }
             }
             Toggle("Automatically save every capture to Library", isOn: setting(\.quickSave.autoSaveCaptures))
         }
@@ -323,5 +372,34 @@ struct SettingsView: View {
             get: { store.value[keyPath: keyPath] },
             set: { store.value[keyPath: keyPath] = $0 }
         )
+    }
+}
+
+/// Where macOS screenshots are picked up from, and a way out when the
+/// folder cannot be read.
+private struct CaptureLineSourceStatus: View {
+    @ObservedObject var controller: CaptureLineController
+
+    var body: some View {
+        if let folder = controller.screenshotFolder {
+            LabeledContent("Watching") {
+                Text(folder.path.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            if !controller.canReadScreenshotFolder {
+                Label("iSnap cannot read this folder. Allow access in System Settings → Privacy & Security → Files and Folders, then try again.", systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                    .font(.caption)
+                HStack {
+                    Button("Open Privacy Settings") {
+                        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                    Button("Try Again", action: controller.retryScreenshotFolder)
+                }
+            }
+        }
     }
 }

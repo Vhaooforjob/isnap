@@ -51,13 +51,13 @@ Reviewed from the public Tendedero repository (`main`, 2026-10-08). Tendedero ne
 | Hide during full-screen Spaces | Private `CGSCopyManagedDisplaySpaces` Space type check | Implemented |
 | Breeze, tilt, glass cards, clip, sounds | SwiftUI `CaptureLineView`; sounds toggle in Settings | Implemented |
 | Persist line across launches | `UserDefaults` (`captureLine.items`), missing files pruned | Implemented |
-| Localization (es, zh-Hans) | iSnap UI is English-only | Not ported |
+| Localization (es, zh-Hans) | iSnap ships English and Vietnamese through `Localizable.xcstrings`; Spanish and Chinese are not translated | Adapted |
 
 iSnap-specific choices: captures can skip the editor (`Open the editor after each capture` off) and live only on the line; with Library archiving off they are written to `~/Library/Application Support/iSnap/Line` and trashed when taken down. Library files are never deleted from the line.
 
 ## Deliberate platform adaptations
 
-- Windows `PrintScreen` shortcuts are replaced with macOS-safe defaults: `⌃⌥1`, `⌃⌥2`, and `⌃⌥3`.
+- Windows `PrintScreen` shortcuts are replaced with macOS-safe defaults: `⌃⌥1` (screen under the pointer), `⌃⌥2`, and `⌃⌥3`. Stitching every display stays available from the Capture menu and toolbar.
 - The Windows taskbar tray becomes an `NSStatusItem` menu.
 - Win32/GDI and Wails IPC are removed; system capture and rendering run in-process through Apple frameworks.
 - Deleted library items go to Trash instead of being permanently deleted.

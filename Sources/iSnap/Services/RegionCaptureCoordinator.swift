@@ -21,13 +21,17 @@ final class RegionCaptureCoordinator {
     private func showOverlays() {
         NSApp.activate(ignoringOtherApps: true)
         windows = NSScreen.screens.map { screen in
+            // With `screen:`, the content rect is relative to that screen's
+            // origin. Passing the global frame pushed overlays on secondary
+            // displays off screen, so only the main display could be selected.
             let window = SelectionWindow(
-                contentRect: screen.frame,
+                contentRect: CGRect(origin: .zero, size: screen.frame.size),
                 styleMask: .borderless,
                 backing: .buffered,
                 defer: false,
                 screen: screen
             )
+            window.setFrame(screen.frame, display: false)
             window.level = .screenSaver
             window.backgroundColor = .clear
             window.isOpaque = false
@@ -42,7 +46,7 @@ final class RegionCaptureCoordinator {
                     width: rect.width,
                     height: rect.height
                 )
-                let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID ?? 0
+                let displayID = screen.displayID ?? 0
                 self.finish(ScreenSelection(displayID: displayID, rect: localFromTop))
             }
             view.onCancel = { [weak self] in self?.finish(nil) }
@@ -50,7 +54,9 @@ final class RegionCaptureCoordinator {
             window.makeKeyAndOrderFront(nil)
             return window
         }
-        windows.first?.makeKey()
+        // Escape goes to the key overlay: the one under the pointer.
+        let pointerScreen = NSScreen.underPointer
+        (windows.first { $0.screen == pointerScreen } ?? windows.first)?.makeKey()
     }
 
     private func finish(_ selection: ScreenSelection?) {
@@ -72,6 +78,7 @@ private final class RegionSelectionView: NSView {
     private var current: CGPoint?
 
     override var acceptsFirstResponder: Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -79,6 +86,7 @@ private final class RegionSelectionView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
+        window?.makeKey()
         start = convert(event.locationInWindow, from: nil)
         current = start
         needsDisplay = true
@@ -105,7 +113,7 @@ private final class RegionSelectionView: NSView {
         NSColor.black.withAlphaComponent(0.5).setFill()
         bounds.fill()
         guard start != nil, current != nil else {
-            drawHint("Drag to capture • Esc to cancel")
+            drawHint(String(localized: "Drag to capture • Esc to cancel"))
             return
         }
         let rect = selectionRect

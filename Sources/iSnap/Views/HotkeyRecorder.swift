@@ -74,7 +74,7 @@ final class ShortcutRecorderView: NSControl {
         path.lineWidth = isRecording ? 2 : 1
         path.stroke()
 
-        let text = isRecording ? "Type shortcut…" : shortcut
+        let text = isRecording ? String(localized: "Type shortcut…") : shortcut
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 13, weight: isRecording ? .regular : .medium),
             .foregroundColor: isRecording ? NSColor.secondaryLabelColor : NSColor.labelColor
@@ -164,5 +164,29 @@ extension View {
         } else {
             self
         }
+    }
+}
+
+extension EditorKeyboardShortcut {
+    var modifierFlags: NSEvent.ModifierFlags {
+        var flags: NSEvent.ModifierFlags = []
+        if modifiers.contains(.command) { flags.insert(.command) }
+        if modifiers.contains(.control) { flags.insert(.control) }
+        if modifiers.contains(.option) { flags.insert(.option) }
+        if modifiers.contains(.shift) { flags.insert(.shift) }
+        return flags
+    }
+}
+
+extension NSMenuItem {
+    /// Shows a recorded shortcut such as "⌃⌥1" next to the item.
+    func showShortcut(_ value: String) {
+        guard let shortcut = EditorKeyboardShortcut.parse(value) else {
+            keyEquivalent = ""
+            keyEquivalentModifierMask = []
+            return
+        }
+        keyEquivalent = String(shortcut.key.character)
+        keyEquivalentModifierMask = shortcut.modifierFlags
     }
 }

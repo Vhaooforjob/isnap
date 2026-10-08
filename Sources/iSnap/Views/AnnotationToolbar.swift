@@ -103,7 +103,7 @@ struct AnnotationToolbar: View {
             } label: {
                 if compact { Image(systemName: "pencil") } else { Label("Edit…", systemImage: "pencil") }
             }
-            .help(selected.type == .text ? "Edit text" : "Edit marker style and value")
+            .help(selected.type == .text ? String(localized: "Edit text") : String(localized: "Edit marker style and value"))
         }
     }
 
@@ -185,7 +185,7 @@ struct AnnotationToolbar: View {
     private var contextControls: some View {
         if document.tool == .crop {
             Picker("Ratio", selection: $document.cropAspectRatio) {
-                ForEach(CropAspectRatio.allCases) { Text($0.rawValue).tag($0) }
+                ForEach(CropAspectRatio.allCases) { Text($0.title).tag($0) }
             }
             .frame(width: 100)
             Button("Apply", action: document.applyCrop).disabled(document.cropRect == nil)
@@ -299,7 +299,7 @@ private struct StickerPicker: View {
                     }
                     .buttonStyle(.plain)
                     .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 7))
-                    .help(sticker.name)
+                    .help(sticker.localizedName)
                 }
             }
         }

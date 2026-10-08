@@ -11,7 +11,7 @@ let package = Package(
         .executableTarget(
             name: "iSnap",
             path: "Sources/iSnap",
-            exclude: ["Resources/Info.plist", "Resources/iSnap.entitlements"],
+            exclude: ["Resources/Info.plist", "Resources/iSnap.entitlements", "Resources/Localizable.xcstrings"],
             linkerSettings: [
                 .linkedFramework("AppKit"),
                 .linkedFramework("AuthenticationServices"),

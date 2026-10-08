@@ -2,23 +2,36 @@ import AppKit
 import Foundation
 
 enum CaptureMode: String, CaseIterable, Identifiable, Codable {
+    /// The display under the pointer.
     case fullScreen
     case region
     case window
+    /// Every display stitched into one image.
+    case allDisplays
 
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .fullScreen: "Full Screen"
-        case .region: "Region"
-        case .window: "Window"
+        case .fullScreen: String(localized: "Screen")
+        case .region: String(localized: "Region")
+        case .window: String(localized: "Window")
+        case .allDisplays: String(localized: "All Displays")
+        }
+    }
+    var help: String {
+        switch self {
+        case .fullScreen: String(localized: "Capture the screen under the pointer")
+        case .region: String(localized: "Capture a region")
+        case .window: String(localized: "Capture a window")
+        case .allDisplays: String(localized: "Capture every display in one image")
         }
     }
     var symbol: String {
         switch self {
-        case .fullScreen: "rectangle.on.rectangle"
+        case .fullScreen: "display"
         case .region: "viewfinder"
         case .window: "macwindow"
+        case .allDisplays: "rectangle.on.rectangle"
         }
     }
 }
@@ -27,7 +40,20 @@ enum EditorTool: String, CaseIterable, Identifiable, Codable {
     case select, crop, rectangle, ellipse, arrow, line, text, spotlight, number, image
 
     var id: String { rawValue }
-    var title: String { rawValue.capitalized }
+    var title: String {
+        switch self {
+        case .select: String(localized: "Select")
+        case .crop: String(localized: "Crop")
+        case .rectangle: String(localized: "Rectangle")
+        case .ellipse: String(localized: "Ellipse")
+        case .arrow: String(localized: "Arrow")
+        case .line: String(localized: "Line")
+        case .text: String(localized: "Text")
+        case .spotlight: String(localized: "Spotlight")
+        case .number: String(localized: "Number")
+        case .image: String(localized: "Image")
+        }
+    }
     var symbol: String {
         switch self {
         case .select: "cursorarrow"
@@ -59,16 +85,16 @@ enum WatermarkPlacement: String, CaseIterable, Identifiable, Codable {
 
     var title: String {
         switch self {
-        case .topLeft: "Top Left"
-        case .top: "Top"
-        case .topRight: "Top Right"
-        case .left: "Left"
-        case .center: "Center"
-        case .right: "Right"
-        case .bottomLeft: "Bottom Left"
-        case .bottom: "Bottom"
-        case .bottomRight: "Bottom Right"
-        case .tiled: "Tile Entire Image"
+        case .topLeft: String(localized: "Top Left")
+        case .top: String(localized: "Top")
+        case .topRight: String(localized: "Top Right")
+        case .left: String(localized: "Left")
+        case .center: String(localized: "Center")
+        case .right: String(localized: "Right")
+        case .bottomLeft: String(localized: "Bottom Left")
+        case .bottom: String(localized: "Bottom")
+        case .bottomRight: String(localized: "Bottom Right")
+        case .tiled: String(localized: "Tile Entire Image")
         }
     }
 }
@@ -78,6 +104,7 @@ enum CropAspectRatio: String, CaseIterable, Identifiable, Codable {
     case ratio9x16 = "9:16", ratio3x4 = "3:4"
 
     var id: String { rawValue }
+    var title: String { self == .free ? String(localized: "Free") : rawValue }
     var value: CGFloat? {
         switch self {
         case .free: nil
@@ -96,6 +123,7 @@ enum OutputRatio: String, CaseIterable, Identifiable, Codable {
     case ratio3x4 = "3:4", ratio2x3 = "2:3"
 
     var id: String { rawValue }
+    var title: String { self == .automatic ? String(localized: "Auto") : rawValue }
     var value: CGFloat? {
         let parts = rawValue.split(separator: ":").compactMap { Double($0) }
         guard parts.count == 2, parts[1] != 0 else { return nil }
@@ -106,6 +134,13 @@ enum OutputRatio: String, CaseIterable, Identifiable, Codable {
 enum BorderPosition: String, CaseIterable, Identifiable, Codable {
     case outside, center, inside
     var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .outside: String(localized: "Outside")
+        case .center: String(localized: "Center")
+        case .inside: String(localized: "Inside")
+        }
+    }
 }
 
 enum ExportFormat: String, CaseIterable, Identifiable, Codable {
@@ -117,6 +152,13 @@ enum ExportFormat: String, CaseIterable, Identifiable, Codable {
 enum FilenamePattern: String, CaseIterable, Identifiable, Codable {
     case timestamp, date, increment
     var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .timestamp: String(localized: "Timestamp")
+        case .date: String(localized: "Date")
+        case .increment: String(localized: "Increment")
+        }
+    }
 }
 
 struct CaptureResult: Identifiable {
@@ -149,6 +191,7 @@ struct StickerPreset: Identifiable, Hashable {
     let name: String
 
     var id: String { emoji }
+    var localizedName: String { Bundle.main.localizedString(forKey: name, value: name, table: nil) }
 
     static let all: [StickerPreset] = [
         .init(emoji: "😀", name: "Smile"),
@@ -207,6 +250,7 @@ struct RGBAColor: Codable, Hashable {
 struct GradientPreset: Identifiable, Codable, Hashable {
     var id: String { name }
     let name: String
+    var localizedName: String { Bundle.main.localizedString(forKey: name, value: name, table: nil) }
     let start: RGBAColor
     let end: RGBAColor
 

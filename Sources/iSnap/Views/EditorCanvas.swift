@@ -481,8 +481,8 @@ final class InteractiveCanvasView: NSView {
     }
 
     private func drawEmptyState() {
-        let title = "Capture, paste, or open an image"
-        let subtitle = "Use ⌃⌥1 for all displays or ⌃⌥2 for a region"
+        let title = String(localized: "Capture, paste, or open an image")
+        let subtitle = String(localized: "Use ⌃⌥1 for the screen under the pointer or ⌃⌥2 for a region")
         let titleAttributes: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 20, weight: .semibold), .foregroundColor: NSColor.secondaryLabelColor]
         let subtitleAttributes: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 13), .foregroundColor: NSColor.tertiaryLabelColor]
         let titleSize = title.size(withAttributes: titleAttributes)

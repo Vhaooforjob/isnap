@@ -79,13 +79,13 @@ enum DocVaultError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidServerURL: "Enter a valid HTTPS DocVault server URL. HTTP is allowed for localhost."
-        case .notConnected: "Connect iSnap to DocVault first."
-        case .loginCancelled: "DocVault sign-in was cancelled."
-        case .authorizationFailed(let message): "DocVault sign-in failed: \(message)"
+        case .invalidServerURL: String(localized: "Enter a valid HTTPS DocVault server URL. HTTP is allowed for localhost.")
+        case .notConnected: String(localized: "Connect iSnap to DocVault first.")
+        case .loginCancelled: String(localized: "DocVault sign-in was cancelled.")
+        case .authorizationFailed(let message): String(localized: "DocVault sign-in failed: \(message)")
         case .api(let message): message
-        case .invalidResponse: "DocVault returned an invalid response."
-        case .workspaceRequired: "Choose a DocVault workspace before uploading."
+        case .invalidResponse: String(localized: "DocVault returned an invalid response.")
+        case .workspaceRequired: String(localized: "Choose a DocVault workspace before uploading.")
         }
     }
 }

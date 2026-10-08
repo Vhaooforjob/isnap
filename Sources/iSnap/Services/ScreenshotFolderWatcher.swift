@@ -46,7 +46,11 @@ final class ScreenshotFolderWatcher {
         return desktop
     }
 
-    func start() {
+    /// Starts watching. Returns false when the folder cannot be read, most
+    /// often because macOS has not granted iSnap access to the Desktop.
+    @discardableResult
+    func start() -> Bool {
+        guard (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) != nil else { return false }
         let files = listing()
         // Anything created after launch counts as new, even if it landed
         // before the watcher was ready.
@@ -55,7 +59,7 @@ final class ScreenshotFolderWatcher {
         known = Set(files.map(\.path))
 
         let descriptor = open(folder.path, O_EVTONLY)
-        guard descriptor >= 0 else { return }
+        guard descriptor >= 0 else { return false }
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: descriptor,
             eventMask: [.write, .rename, .delete],
@@ -67,6 +71,7 @@ final class ScreenshotFolderWatcher {
         source.setCancelHandler { close(descriptor) }
         source.resume()
         self.source = source
+        return true
     }
 
     func stop() {
@@ -204,5 +209,59 @@ enum SystemScreenshotRouting {
     private static func set(_ key: CFString, _ value: Any?) {
         CFPreferencesSetAppValue(key, value as CFPropertyList?, domain)
         CFPreferencesAppSynchronize(domain)
+    }
+}
+
+/// Notices screenshots copied to the clipboard (⌃⇧⌘3, ⌃⇧⌘4). macOS writes
+/// those as a single item whose only type is PNG; images copied from apps,
+/// including iSnap's own Copy, carry more types. Only the change count and
+/// the types are checked on each tick; the image itself is read only when
+/// it looks like a screenshot.
+@MainActor
+final class ClipboardScreenshotWatcher {
+    private let pasteboard: NSPasteboard
+    private let onScreenshot: (Data) -> Void
+    private var lastChangeCount: Int
+    private var lastImage: Data?
+    private var timer: Timer?
+
+    init(pasteboard: NSPasteboard = .general, onScreenshot: @escaping (Data) -> Void) {
+        self.pasteboard = pasteboard
+        self.onScreenshot = onScreenshot
+        lastChangeCount = pasteboard.changeCount
+    }
+
+    func start() {
+        guard timer == nil else { return }
+        // Whatever was on the clipboard before is not a new screenshot.
+        lastChangeCount = pasteboard.changeCount
+        let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.check() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+
+    func stop() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    private func check() {
+        let count = pasteboard.changeCount
+        guard count != lastChangeCount else { return }
+        lastChangeCount = count
+        guard let items = pasteboard.pasteboardItems,
+              Self.looksLikeScreenshot(items.map { $0.types }),
+              let data = items.first?.data(forType: .png),
+              // The same image written again (an app restoring the
+              // clipboard, a second copy) is not a new screenshot.
+              data != lastImage else { return }
+        lastImage = data
+        onScreenshot(data)
+    }
+
+    static func looksLikeScreenshot(_ itemTypes: [[NSPasteboard.PasteboardType]]) -> Bool {
+        itemTypes.count == 1 && itemTypes[0] == [.png]
     }
 }

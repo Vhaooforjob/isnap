@@ -9,10 +9,10 @@ enum CloudUploadError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notConfigured(let provider): "\(provider) is not configured."
+        case .notConfigured(let provider): String(localized: "\(provider) is not configured.")
         case .invalidResponse(let message): message
-        case .fileTooLarge: "The rendered image exceeds the 50 MB upload limit."
-        case .authorizationFailed(let message): "Authorization failed: \(message)"
+        case .fileTooLarge: String(localized: "The rendered image exceeds the 50 MB upload limit.")
+        case .authorizationFailed(let message): String(localized: "Authorization failed: \(message)")
         }
     }
 }

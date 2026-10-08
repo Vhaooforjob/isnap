@@ -1,6 +1,7 @@
 name: iSnap
 options:
   bundleIdPrefix: dev.isnap
+  developmentLanguage: en
   deploymentTarget:
     macOS: "14.0"
   createIntermediateGroups: true
@@ -27,6 +28,8 @@ targets:
         INFOPLIST_FILE: Sources/iSnap/Resources/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_ENTITLEMENTS: Sources/iSnap/Resources/iSnap.entitlements
+        SWIFT_EMIT_LOC_STRINGS: YES
+        LOCALIZATION_PREFERS_STRING_CATALOGS: YES
     dependencies:
       - target: iSnapWidget
         embed: true

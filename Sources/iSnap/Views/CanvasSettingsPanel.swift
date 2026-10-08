@@ -9,7 +9,7 @@ struct CanvasSettingsPanel: View {
         Form {
             Section("Layout") {
                 Picker("Output", selection: binding(\.outputRatio)) {
-                    ForEach(OutputRatio.allCases) { Text($0.rawValue).tag($0) }
+                    ForEach(OutputRatio.allCases) { Text($0.title).tag($0) }
                 }
                 LabeledSlider(title: "Padding", value: binding(\.padding), range: 0...240, suffix: "px")
                 LabeledSlider(title: "Inset", value: binding(\.insetPercent), range: 0...50, suffix: "%")
@@ -69,7 +69,7 @@ struct CanvasSettingsPanel: View {
                                 }
                         }
                         .buttonStyle(.plain)
-                        .help(preset.name)
+                        .help(preset.localizedName)
                     }
                 }
             }
@@ -134,7 +134,7 @@ struct CanvasSettingsPanel: View {
                     ColorPicker("Color", selection: colorBinding(\.borderColor), supportsOpacity: false)
                     LabeledSlider(title: "Weight", value: binding(\.borderWeight), range: 1...50, suffix: "px")
                     Picker("Position", selection: binding(\.borderPosition)) {
-                        ForEach(BorderPosition.allCases) { Text($0.rawValue.capitalized).tag($0) }
+                        ForEach(BorderPosition.allCases) { Text($0.title).tag($0) }
                     }
                 }
             }
@@ -240,12 +240,12 @@ struct CanvasSettingsPanel: View {
 }
 
 private struct LabeledSlider: View {
-    let title: String
+    let title: LocalizedStringKey
     @Binding var value: CGFloat
     let range: ClosedRange<CGFloat>
     let suffix: String
 
-    init(title: String, value: Binding<CGFloat>, range: ClosedRange<CGFloat>, suffix: String) {
+    init(title: LocalizedStringKey, value: Binding<CGFloat>, range: ClosedRange<CGFloat>, suffix: String) {
         self.title = title
         _value = value
         self.range = range
