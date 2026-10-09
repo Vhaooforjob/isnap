@@ -99,4 +99,6 @@ ISNAP_SHOTS_DIR=/tmp/isnap-shots ISNAP_DEMO_DIR=/path/to/demo-images swift test 
 
 ## License and notices
 
+iSnap is released under the [MIT License](LICENSE).
+
 Third-party notices are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
