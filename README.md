@@ -55,7 +55,21 @@ One Share menu on Capture Line cards, in the editor, and in the Library: AirDrop
 - Screen Recording permission for display and window capture
 - To build: Xcode 16 or later (validated with the Xcode 27 SDK) and [XcodeGen](https://github.com/yonaskolb/XcodeGen)
 
-## Install and build
+## Download and install
+
+Download the `.dmg` (or the `.zip`) from the [latest release](https://github.com/Vhaooforjob/isnap/releases/latest).
+
+**Requirements:** macOS 14 Sonoma or later, Apple Silicon or Intel.
+
+1. Open the `.dmg` and drag **iSnap** into **Applications** (with the `.zip`, unzip it and move `iSnap.app` to Applications).
+2. Open **iSnap** from Applications. The first time, macOS says it cannot verify the app, because it is not notarized by Apple. This is expected for an independent release. Choose one of:
+   - **System Settings → Privacy & Security**, scroll to *"iSnap" was blocked*, click **Open Anyway**, then confirm. (On macOS 14, right-click the app and choose **Open** instead.)
+   - Or run once in Terminal: `xattr -dr com.apple.quarantine /Applications/iSnap.app`
+3. Grant permissions: On the first capture, macOS asks for access. Enable iSnap under **System Settings → Privacy & Security → Screen & System Audio Recording**, then restart iSnap.
+
+Always run iSnap from **Applications** so macOS keeps your permissions. After an update you may have to toggle the permission off and on again, because this build is signed ad hoc. If you want to build from source instead, see below.
+
+## Build from source
 
 ```bash
 swift build

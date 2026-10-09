@@ -16,7 +16,7 @@ struct ReleaseInfo: Decodable, Identifiable {
 }
 
 actor UpdateService {
-    private let releasesURL = URL(string: "https://api.github.com/repos/vhaoo/isnap/releases/latest")!
+    private let releasesURL = URL(string: "https://api.github.com/repos/Vhaooforjob/isnap/releases/latest")!
 
     func latestRelease(currentVersion: String) async throws -> ReleaseInfo? {
         var request = URLRequest(url: releasesURL)
