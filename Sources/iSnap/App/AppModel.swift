@@ -379,6 +379,10 @@ final class AppModel: ObservableObject {
         captureLineController.toggleFromMenu()
     }
 
+    func showCaptureLineFromMenu() {
+        captureLineController.showFromMenu()
+    }
+
     func setCaptureLineVisibility(_ visibility: CaptureLineVisibility) {
         settings.value.captureLine.visibility = visibility
     }

@@ -65,6 +65,9 @@ final class CaptureLineController: ObservableObject {
     /// until shown again or a new capture arrives.
     private var hiddenByUser = false
 
+    /// Keeps the Dock icon in sync with the line being visibly open.
+    var onRevealedChange: ((Bool) -> Void)?
+
     /// How long the pointer rests in the menu bar before the line comes down.
     private static let revealDelay: TimeInterval = 0.25
     /// How long the pointer is away before the line tucks back up.
@@ -373,6 +376,21 @@ final class CaptureLineController: ObservableObject {
         }
     }
 
+    /// Opens the line from the status item menu, regardless of its current
+    /// visibility mode or the menu-bar click that opened the menu.
+    func showFromMenu() {
+        guard isStarted, settings.isEnabled else { return }
+        wasRevealedAtMenuBarClick = false
+        menuBarSuppressed = false
+        hiddenByUser = false
+        keepOpen = true
+        wanted = true
+        panel?.placeOnScreen()
+        updateCapacity()
+        refresh()
+        reveal(pinned: true)
+    }
+
     func toggle() {
         guard isStarted, settings.isEnabled else { return }
         if line.isRevealed {
@@ -444,6 +462,7 @@ final class CaptureLineController: ObservableObject {
         guard revealed != line.isRevealed else { return }
         log.debug("Line \(revealed ? "down" : "up", privacy: .public)")
         line.isRevealed = revealed
+        onRevealedChange?(revealed)
         if !revealed {
             isPinned = false
             peekUntil = .distantPast

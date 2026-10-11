@@ -32,6 +32,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     weak var model: AppModel? {
         didSet {
             model?.presentMainWindow = { [weak self] in self?.showApp() }
+            model?.captureLineController.onRevealedChange = { [weak self] isRevealed in
+                self?.setDockIconVisible(isRevealed)
+            }
             model?.startCaptureLine()
             applyStartupVisibilityIfNeeded()
             let links = pendingDeepLinks
@@ -49,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     private var pendingDeepLinks: [URL] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.accessory)
         buildStatusItem()
     }
 
@@ -78,7 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = NSImage(systemSymbolName: "camera.viewfinder", accessibilityDescription: "iSnap")
         let menu = NSMenu()
-        menu.addItem(withTitle: String(localized: "Show iSnap"), action: #selector(showApp), keyEquivalent: "")
+        menu.addItem(withTitle: String(localized: "Show iSnap"), action: #selector(showCaptureLine), keyEquivalent: "")
         menu.addItem(.separator())
         screenMenuItem = menu.addItem(withTitle: String(localized: "Capture Screen"), action: #selector(captureScreen), keyEquivalent: "")
         regionMenuItem = menu.addItem(withTitle: String(localized: "Capture Region"), action: #selector(captureRegion), keyEquivalent: "")
@@ -160,6 +164,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         NSApp.unhide(nil)
         mainWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    @objc private func showCaptureLine() {
+        model?.showCaptureLineFromMenu()
+    }
+
+    private func setDockIconVisible(_ visible: Bool) {
+        NSApp.setActivationPolicy(visible ? .regular : .accessory)
     }
 
     @objc private func captureScreen() { Task { await model?.capture(.fullScreen) } }
