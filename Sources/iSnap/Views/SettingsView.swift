@@ -167,6 +167,12 @@ struct SettingsView: View {
         Group {
             Section("Capture Line") {
                 Toggle("Hang new captures on a line under the menu bar", isOn: setting(\.captureLine.isEnabled))
+                Picker("Line style", selection: setting(\.captureLine.style)) {
+                    ForEach(CaptureLineStyle.allCases) { style in
+                        Text(style.title).tag(style)
+                    }
+                }
+                .disabled(!store.value.captureLine.isEnabled)
                 Toggle("Open the editor after each capture", isOn: setting(\.captureLine.opensEditorAfterCapture))
                     .disabled(!store.value.captureLine.isEnabled)
                 Picker("Show the line", selection: setting(\.captureLine.visibility)) {

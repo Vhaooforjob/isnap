@@ -499,6 +499,26 @@
         }
       }
     },
+    "Cats": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mèo"
+          }
+        }
+      }
+    },
+    "Classic": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cổ điển"
+          }
+        }
+      }
+    },
     "Capture Line files": {
       "localizations": {
         "vi": {
@@ -625,6 +645,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chụp gì đó và ảnh sẽ được treo ở đây"
+          }
+        }
+      }
+    },
+    "Line style": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kiểu dây"
           }
         }
       }

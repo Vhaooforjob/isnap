@@ -101,6 +101,8 @@ Captures hang on a line tucked under the menu bar, ready to use without opening 
 
 <p align="center"><img src="assets/screenshots/capture-line-live.jpg" width="820" alt="Captures hanging on the Capture Line"></p>
 
+Choose **Classic** or **Cats** in **Settings → Capture Line → Line style**. Classic keeps the compact glass cards and cord. Cats adds a small animated cat decoration above screenshot cards; the screenshots fill their own cards and use the same capacity as Classic.
+
 ### Showing the line
 
 Choose a mode from **menu bar icon → Capture Line** or **Settings → Capture Line → Show the line**:
@@ -182,7 +184,7 @@ Upload from the editor status bar (**Upload**) or from any Share menu (**Upload 
 | Hotkeys | Global capture shortcuts, the Capture Line shortcut, and editor Save/Copy shortcuts |
 | Startup | Language, launch at login, start hidden, close to menu bar, sound after save |
 | Quick Save | Library folder, filename pattern (timestamp, date, increment), automatic saving of captures |
-| Capture Line | On/off, opening the editor after captures, display mode, sounds, macOS and clipboard screenshot pickup |
+| Capture Line | On/off, line style, opening the editor after captures, display mode, sounds, macOS and clipboard screenshot pickup |
 | Storage | Sizes, Clear Cache, Capture Line cleanup |
 | Export | Format, JPEG quality, canvas background, copy after quick save |
 | Updates | Check on launch, check now |

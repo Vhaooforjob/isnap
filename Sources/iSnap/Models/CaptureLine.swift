@@ -31,11 +31,18 @@ final class CaptureLine: ObservableObject {
     @Published var pressedID: UUID?
     /// Whether the line has slid down into view.
     @Published var isRevealed = false
+    @Published var style: CaptureLineStyle = .classic
 
     /// Card frames in panel coordinates, reported by the views. The panel
     /// only catches clicks over cards and lets the rest through.
     var hitRects: [UUID: CGRect] = [:]
-    var maxItems = 8
+    var maxItems = 8 {
+        didSet {
+            while liveCount > maxItems, let oldest = items.first(where: { !$0.isFalling }) {
+                drop(oldest.id, quietly: true)
+            }
+        }
+    }
     var playsSounds = true
 
     /// Opens a capture in the iSnap editor.

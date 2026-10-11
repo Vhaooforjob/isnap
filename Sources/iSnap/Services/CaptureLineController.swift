@@ -84,10 +84,11 @@ final class CaptureLineController: ObservableObject {
         isStarted = true
         self.settings = settings
         line.playsSounds = settings.playsSounds
+        line.style = settings.style
 
         let host = NSHostingView(rootView: CaptureLineView(line: line))
         host.sizingOptions = []
-        let panel = CaptureLinePanel(content: host)
+        let panel = CaptureLinePanel(content: host, line: line)
         self.panel = panel
         panel.placeOnScreen()
         updateCapacity()
@@ -139,7 +140,12 @@ final class CaptureLineController: ObservableObject {
         let old = settings
         settings = newValue
         line.playsSounds = newValue.playsSounds
+        line.style = newValue.style
         guard isStarted else { return }
+        if old.style != newValue.style {
+            panel?.placeOnScreen()
+            updateCapacity()
+        }
         if old.isEnabled != newValue.isEnabled
             || old.hangsSystemScreenshots != newValue.hangsSystemScreenshots
             || old.routesSystemScreenshots != newValue.routesSystemScreenshots
@@ -592,7 +598,10 @@ final class CaptureLineController: ObservableObject {
 /// app and every Space except full screen ones, never takes focus, and lets
 /// clicks through everywhere except over the cards.
 private final class CaptureLinePanel: NSPanel {
-    init(content: NSView) {
+    private let line: CaptureLine
+
+    init(content: NSView, line: CaptureLine) {
+        self.line = line
         super.init(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         isOpaque = false
         backgroundColor = .clear
@@ -620,11 +629,12 @@ private final class CaptureLinePanel: NSPanel {
 
     func placeOnScreen(_ screen: NSScreen? = nil) {
         guard let visible = (screen ?? Self.screenUnderPointer())?.visibleFrame else { return }
+        let height = CaptureLineLayout.panelHeight
         let target = NSRect(
             x: visible.minX,
-            y: visible.maxY - CaptureLineLayout.panelHeight,
+            y: visible.maxY - height,
             width: visible.width,
-            height: CaptureLineLayout.panelHeight
+            height: height
         )
         if frame != target { setFrame(target, display: true) }
     }

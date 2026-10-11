@@ -28,7 +28,7 @@ Rectangles, ellipses, arrows (straight or curved), lines, text, numbered or lett
 
 ### The Capture Line
 
-Every capture flies up and hangs on a line tucked under the menu bar, including screenshots taken with `⇧⌘3/4/5` and clipboard screenshots (`⌃⇧⌘3/4`). Click a card to copy it, double-click to edit it in iSnap, press and hold for Markup, drag it into any app or folder, or use its share button. Choose **Show on Hover**, **Always Show**, or **Hide**, and toggle it any time with `⌃⌥T`.
+Every capture flies up and hangs on a line tucked under the menu bar, including screenshots taken with `⇧⌘3/4/5` and clipboard screenshots (`⌃⇧⌘3/4`). Click a card to copy it, double-click to edit it in iSnap, press and hold for Markup, drag it into any app or folder, or use its share button. Choose the **Classic** or **Cats** line in Settings, pick **Show on Hover**, **Always Show**, or **Hide**, and toggle it any time with `⌃⌥T`.
 
 <p align="center"><img src="docs/assets/screenshots/capture-line-live.png" width="820" alt="A live recording of captures hanging on the Capture Line"></p>
 

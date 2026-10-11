@@ -116,6 +116,7 @@ struct AppSettings: Codable, Equatable {
     /// The Capture Line: recent captures hang on a line tucked under the menu bar.
     struct CaptureLineSettings: Codable, Equatable {
         var isEnabled = true
+        var style = CaptureLineStyle.classic
         var opensEditorAfterCapture = true
         var hangsSystemScreenshots = true
         var routesSystemScreenshots = false
@@ -126,7 +127,7 @@ struct AppSettings: Codable, Equatable {
         var hangsClipboardScreenshots = true
 
         private enum CodingKeys: String, CodingKey {
-            case isEnabled, opensEditorAfterCapture, hangsSystemScreenshots
+            case isEnabled, style, opensEditorAfterCapture, hangsSystemScreenshots
             case routesSystemScreenshots, visibility, playsSounds, hangsClipboardScreenshots
             // Replaced by `visibility`; read once to migrate.
             case revealsFromMenuBar, keepsVisible
@@ -137,6 +138,7 @@ struct AppSettings: Codable, Equatable {
         init(from decoder: Decoder) throws {
             let values = try decoder.container(keyedBy: CodingKeys.self)
             isEnabled = try values.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
+            style = try values.decodeIfPresent(CaptureLineStyle.self, forKey: .style) ?? .classic
             opensEditorAfterCapture = try values.decodeIfPresent(Bool.self, forKey: .opensEditorAfterCapture) ?? true
             hangsSystemScreenshots = try values.decodeIfPresent(Bool.self, forKey: .hangsSystemScreenshots) ?? true
             routesSystemScreenshots = try values.decodeIfPresent(Bool.self, forKey: .routesSystemScreenshots) ?? false
@@ -154,6 +156,7 @@ struct AppSettings: Codable, Equatable {
         func encode(to encoder: Encoder) throws {
             var values = encoder.container(keyedBy: CodingKeys.self)
             try values.encode(isEnabled, forKey: .isEnabled)
+            try values.encode(style, forKey: .style)
             try values.encode(opensEditorAfterCapture, forKey: .opensEditorAfterCapture)
             try values.encode(hangsSystemScreenshots, forKey: .hangsSystemScreenshots)
             try values.encode(routesSystemScreenshots, forKey: .routesSystemScreenshots)
@@ -178,6 +181,20 @@ struct AppSettings: Codable, Equatable {
         var serverURL = "https://docvault-backend-xokq.onrender.com"
         var webURL = "https://docvault-dev.vercel.app"
         var workspaceID = ""
+    }
+}
+
+enum CaptureLineStyle: String, Codable, CaseIterable, Identifiable {
+    case classic
+    case cats
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .classic: String(localized: "Classic")
+        case .cats: String(localized: "Cats")
+        }
     }
 }
 
