@@ -10,7 +10,8 @@ struct AnnotationToolbar: View {
     var body: some View {
         ViewThatFits(in: .horizontal) {
             fullToolbar.fixedSize(horizontal: true, vertical: false)
-            compactToolbar
+            compactToolbar.fixedSize(horizontal: true, vertical: false)
+            narrowToolbar
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .buttonStyle(.bordered)
@@ -46,24 +47,47 @@ struct AnnotationToolbar: View {
             documentActions(compact: true)
             Divider().frame(height: 22)
             zoomControls
-            Button {
-                isShowingControls.toggle()
-            } label: {
-                Image(systemName: "slider.horizontal.3")
-            }
-            .help("Style and selection controls")
-            .popover(isPresented: $isShowingControls, arrowEdge: .bottom) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Controls").font(.headline)
-                    styleControls
-                    contextControls
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .padding(14)
-                .frame(minWidth: 250)
-            }
+            controlsButton
             Spacer(minLength: 0)
+        }
+    }
+
+    private var narrowToolbar: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 4) {
+                toolButtons
+                Divider().frame(height: 22)
+                historyControls
+                editButton(compact: true)
+                Spacer(minLength: 0)
+            }
+            HStack(spacing: 6) {
+                documentActions(compact: false)
+                Divider().frame(height: 22)
+                zoomControls
+                controlsButton
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private var controlsButton: some View {
+        Button {
+            isShowingControls.toggle()
+        } label: {
+            Image(systemName: "slider.horizontal.3")
+        }
+        .help("Style and selection controls")
+        .popover(isPresented: $isShowingControls, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Controls").font(.headline)
+                styleControls
+                contextControls
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .padding(14)
+            .frame(minWidth: 250)
         }
     }
 
@@ -196,7 +220,7 @@ struct AnnotationToolbar: View {
             Button("Apply", action: document.applyCrop).disabled(document.cropRect == nil)
             if document.isCropApplied { Button("Reset", action: document.resetCrop) }
         }
-        if let selected = document.selectedAnnotation {
+        if let selected = document.selectedAnnotation, !selected.type.isPrivacyMask {
             HStack(spacing: 4) {
                 Image(systemName: "rotate.right")
                 Slider(value: rotationBinding(selected), in: -180...180, step: 1).frame(width: 72)
@@ -280,7 +304,7 @@ struct AnnotationToolbar: View {
         case .text: "T"
         case .spotlight: "S"
         case .number: "N"
-        case .image: "—"
+        case .image, .redact, .blur, .pixelate: "—"
         }
     }
 }

@@ -5,6 +5,21 @@ import Vision
 struct ScreenshotParseResult: Equatable, Sendable {
     let text: String
     let lineCount: Int
+    var regions: [RecognizedRegion] = []
+}
+
+struct RecognizedRegion: Identifiable, Equatable, Sendable {
+    let id = UUID()
+    let text: String
+    /// Source pixels with a top-left origin, matching annotations.
+    let rect: CGRect
+
+    var mayContainPrivateInformation: Bool {
+        let range = NSRange(text.startIndex..., in: text)
+        let email = try? NSRegularExpression(pattern: #"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}"#, options: .caseInsensitive)
+        let phone = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.phoneNumber.rawValue)
+        return email?.firstMatch(in: text, range: range) != nil || phone?.firstMatch(in: text, range: range) != nil
+    }
 }
 
 actor ScreenshotParserService {
@@ -40,6 +55,12 @@ actor ScreenshotParserService {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         }.filter { !$0.isEmpty }
 
-        return ScreenshotParseResult(text: lines.joined(separator: "\n"), lineCount: lines.count)
+        let regions = observations.compactMap { observation -> RecognizedRegion? in
+            guard let text = observation.topCandidates(1).first?.string, !text.isEmpty else { return nil }
+            let box = observation.boundingBox
+            return RecognizedRegion(text: text, rect: CGRect(x: box.minX * CGFloat(image.width),
+                y: (1 - box.maxY) * CGFloat(image.height), width: box.width * CGFloat(image.width), height: box.height * CGFloat(image.height)))
+        }
+        return ScreenshotParseResult(text: lines.joined(separator: "\n"), lineCount: lines.count, regions: regions)
     }
 }

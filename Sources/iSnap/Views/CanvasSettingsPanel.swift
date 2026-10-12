@@ -2,11 +2,31 @@ import AppKit
 import SwiftUI
 
 struct CanvasSettingsPanel: View {
+    @EnvironmentObject private var model: AppModel
+    @State private var presetName = ""
     @ObservedObject var document: EditorDocument
     @ObservedObject var settings: SettingsStore
 
     var body: some View {
         Form {
+            Section("Saved Presets") {
+                HStack {
+                    TextField("Preset name", text: $presetName)
+                    Button("Save") {
+                        model.saveCanvasPreset(name: presetName)
+                        presetName = ""
+                    }.disabled(presetName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                ForEach(model.features.state.presets) { preset in
+                    HStack {
+                        Button(preset.name) { model.applyPreset(preset) }
+                        Spacer()
+                        Button(role: .destructive) { model.features.state.presets.removeAll { $0.id == preset.id } } label: {
+                            Image(systemName: "trash")
+                        }.help("Delete preset")
+                    }
+                }
+            }
             Section("Layout") {
                 Picker("Output", selection: binding(\.outputRatio)) {
                     ForEach(OutputRatio.allCases) { Text($0.title).tag($0) }

@@ -554,6 +554,7 @@ private struct CaptureGrabArea: NSViewRepresentable {
             let menu = NSMenu()
             menu.addItem(CaptureLineMenuItem("Copy") { line.copy(id) })
             menu.addItem(CaptureLineMenuItem("Edit in iSnap") { line.edit(id) })
+            menu.addItem(CaptureLineMenuItem("Pin on Screen") { line.onPin?(url) })
             menu.addItem(CaptureLineMenuItem("Markup") { line.markup(id) })
             if let share = line.shareMenu?(url) {
                 let shareItem = NSMenuItem(title: String(localized: "Share"), action: nil, keyEquivalent: "")

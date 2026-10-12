@@ -23,6 +23,14 @@ SwiftUI App / NSStatusItem / Commands
 
 `EditorDocument` is the source of truth for the current image, annotation list, crop state, styling defaults, and history. The interactive AppKit view translates pointer coordinates into source-image coordinates. The same `ExportRenderer` produces the on-screen preview and final exported pixels, preventing preview/export drift.
 
+`EditorProject` is the versioned `.isnap` document format. `ProjectStore` writes atomically and embeds bitmap assets, annotations, original crop state, and canvas configuration. `AppModel+Workspace` handles debounced recovery snapshots and archives the outgoing document before an editor switch. An unsuccessful preservation prevents that switch. Project backgrounds are imported using a content digest to avoid duplicate asset files. Drafts and project assets are user data, not cache.
+
+`WorkspaceFeatures` persists named presets, path-keyed Library tags/favorites and capture preferences separately from legacy settings. `LibrarySearchIndex` is an actor that caches local Vision text by path, modification time and file size; `AppModel` publishes incremental indexing progress. `BatchExportService` renders selected saved images serially off the main actor, optionally resizes them, and writes unique filenames without overwriting existing data.
+
+Privacy annotations are rendered after other annotations. Solid masks use opaque black; blur/pixelation use Core Image, with an opaque fallback if filtering cannot render. Vision suggestions retain top-left pixel rectangles and require explicit selection before redaction. Projects retain original image data; rendered exports do not retain annotation layers.
+
+`ScrollCaptureController` owns a floating manual-capture session. `ScrollingStitcher` estimates vertical overlap from sampled grayscale images, rejects ambiguous matches, and composites accepted frames at original resolution. Users review and can override each seam; there is no automatic scrolling or sticky-header removal. `PinnedImageController` owns independent floating image panels with opacity and position lock.
+
 Editor Save and Copy toolbar/menu actions both render through `ExportService`. Their defaults are `⌘S` and `⌘C`; `SettingsStore` persists user-defined replacements and the SwiftUI command menu observes changes immediately.
 
 Inserted overlay images are PNG-backed `Annotation` values, so selection, transforms, opacity, history, crop translation, preview, and export use the existing document pipeline. Watermarks live in `CanvasConfiguration`; `ExportRenderer` composites text or image stamps last, either at an anchored position or tiled across the complete output.

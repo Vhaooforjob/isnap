@@ -51,6 +51,7 @@ final class MarketingShotsTests: XCTestCase {
         model.document.canvas = beautifiedCanvas()
         model.settings.value.canvas = model.document.canvas
         try await shot(ContentView().environmentObject(model), "editor", size: CGSize(width: 1440, height: 900))
+        try await shot(ContentView().environmentObject(model), "editor-compact", size: CGSize(width: 940, height: 680))
 
         // The final image, straight from the renderer that exports and copies.
         let rendered = try ExportRenderer.render(RenderRequest(
@@ -69,7 +70,14 @@ final class MarketingShotsTests: XCTestCase {
         // Library.
         model.section = .library
         await model.reloadLibrary()
+        if let item = model.libraryItems.first {
+            model.features.setMetadata(LibraryMetadata(favorite: true, tags: ["Bug report", "UI"]), for: item.url)
+        }
         try await shot(ContentView().environmentObject(model), "library", size: CGSize(width: 1440, height: 900))
+        model.batchItems = Array(model.libraryItems.prefix(3))
+        try await shot(BatchExportView().environmentObject(model), "batch-export", size: CGSize(width: 560, height: 460))
+        model.sensitiveRegions = [RecognizedRegion(text: "Contact demo@example.com", rect: CGRect(x: 20, y: 20, width: 240, height: 30))]
+        try await shot(RedactionReviewView().environmentObject(model), "redaction-review", size: CGSize(width: 650, height: 470))
         model.section = .editor
 
         // Settings tabs.
@@ -116,7 +124,8 @@ final class MarketingShotsTests: XCTestCase {
         let files = try FileManager.default.contentsOfDirectory(at: line, includingPropertiesForKeys: nil)
             .sorted { $0.lastPathComponent < $1.lastPathComponent }
         for file in files { captureLine.hang(file, quietly: true) }
-        return AppModel(settings: store, captureLine: captureLine, connectsServices: false)
+        return AppModel(settings: store, captureLine: captureLine, connectsServices: false,
+            features: WorkspaceFeatures(url: sandbox.appendingPathComponent("workspace.json")))
     }
 
     /// Callouts on the demo dashboard, in source pixels (top-left origin).
@@ -180,7 +189,8 @@ final class MarketingShotsTests: XCTestCase {
 
     /// Renders a view in a borderless light window at 2x and writes a PNG.
     private func shot<V: View>(_ view: V, _ name: String, size: CGSize, transparent: Bool = false, settle: Double = 1.2) async throws {
-        let host = NSHostingView(rootView: view.frame(width: size.width, height: size.height))
+        let host = NSHostingView(rootView: view.frame(width: size.width, height: size.height)
+            .background(transparent ? Color.clear : Color(nsColor: .windowBackgroundColor)))
         host.frame = CGRect(origin: .zero, size: size)
         host.appearance = NSAppearance(named: .aqua)
         let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)

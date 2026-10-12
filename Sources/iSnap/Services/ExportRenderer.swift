@@ -1,5 +1,6 @@
 import AppKit
 import CoreText
+import CoreImage
 import Foundation
 
 struct RenderRequest {
@@ -169,10 +170,12 @@ private enum AnnotationRenderer {
             context.restoreGState()
         }
 
-        for annotation in annotations where annotation.type != .spotlight {
+        // Privacy masks are composited last so overlays cannot reveal the source.
+        let ordered = annotations.filter { !$0.type.isPrivacyMask } + annotations.filter { $0.type.isPrivacyMask }
+        for annotation in ordered where annotation.type != .spotlight {
             context.saveGState()
             let frame = map(annotation.normalizedFrame)
-            if annotation.rotation != 0 {
+            if annotation.rotation != 0 && !annotation.type.isPrivacyMask {
                 context.translateBy(x: frame.midX, y: frame.midY)
                 context.rotate(by: -annotation.rotation * .pi / 180)
                 context.translateBy(x: -frame.midX, y: -frame.midY)
@@ -184,6 +187,8 @@ private enum AnnotationRenderer {
             context.setLineJoin(.round)
 
             switch annotation.type {
+            case .redact, .blur, .pixelate:
+                drawPrivacyMask(annotation, frame: frame, context: context)
             case .rectangle:
                 context.addPath(CGPath(roundedRect: frame, cornerWidth: annotation.cornerRadius * scaleX, cornerHeight: annotation.cornerRadius * scaleY, transform: nil))
                 paintPath(annotation, context)
@@ -236,6 +241,37 @@ private enum AnnotationRenderer {
             }
             context.restoreGState()
         }
+    }
+
+    private static let filterContext = CIContext(options: [.cacheIntermediates: false, .useSoftwareRenderer: true])
+
+    private static func drawPrivacyMask(_ annotation: Annotation, frame: CGRect, context: CGContext) {
+        let bounds = CGRect(x: 0, y: 0, width: context.width, height: context.height)
+        let clipped = frame.integral.intersection(bounds)
+        guard !clipped.isEmpty else { return }
+        if annotation.type == .redact {
+            context.setFillColor(NSColor.black.cgColor)
+            context.fill(clipped)
+            return
+        }
+        guard let snapshot = context.makeImage() else {
+            context.setFillColor(NSColor.black.cgColor); context.fill(clipped)
+            return
+        }
+        let input = CIImage(cgImage: snapshot)
+        let filtered: CIImage
+        if annotation.type == .blur {
+            filtered = input.clampedToExtent().applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: 18.0])
+        } else {
+            filtered = input.applyingFilter("CIPixellate", parameters: [kCIInputScaleKey: 16.0])
+        }
+        guard let image = filterContext.createCGImage(filtered, from: clipped) else {
+            // A failed filter must never export the unmasked source.
+            context.setFillColor(NSColor.black.cgColor); context.fill(clipped)
+            return
+        }
+        context.interpolationQuality = .none
+        context.draw(image, in: clipped)
     }
 
     private static func paintPath(_ annotation: Annotation, _ context: CGContext) {

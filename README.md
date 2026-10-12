@@ -44,6 +44,11 @@ One Share menu on Capture Line cards, in the editor, and in the Library: AirDrop
 - **Widgets** (small and medium) for recent screenshots
 - **English and Tiếng Việt** interface, switchable from the menu bar icon
 - PNG/JPEG export, quick save (`⌘S`), copy (`⌘C`), filename patterns, launch at login, and update checks
+- **Editable projects and recovery:** save `.isnap` projects with original images, layers, crop state and embedded backgrounds; recover the last session and earlier drafts
+- **Privacy tools:** solid redaction, blur, pixelation, and reviewed on-device suggestions for email addresses and phone numbers
+- **Searchable Library:** local OCR search, tags, favorites, date filters, multiple selection and batch export with presets, watermarks, resizing and filename prefixes
+- **Capture options:** repeat the last region, 3/5/10-second delay, optional cursor, and manual scrolling capture with overlap detection and seam review
+- **Reusable canvas presets** and floating pinned images with opacity and position lock
 
 | Hotkeys | Text extraction | Storage |
 | --- | --- | --- |
@@ -58,6 +63,8 @@ One Share menu on Capture Line cards, in the editor, and in the Library: AirDrop
 ## Download and install
 
 Download the `.dmg` (or the `.zip`) from the [latest release](https://github.com/Vhaooforjob/isnap/releases/latest).
+
+See [what changed in 1.0.1 compared with 1.0](docs/releases/v1.0.1.md), including editable projects, privacy tools, Library search, scrolling capture and the independent Settings popup.
 
 **Requirements:** macOS 14 Sonoma or later, Apple Silicon or Intel.
 

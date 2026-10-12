@@ -14,6 +14,7 @@ enum StorageKind: String, CaseIterable, Identifiable, Sendable {
     /// Custom background images.
     case backgrounds
     case settings
+    case projects
 
     var id: String { rawValue }
 
@@ -25,6 +26,7 @@ enum StorageKind: String, CaseIterable, Identifiable, Sendable {
         case .widget: String(localized: "Widget Thumbnails")
         case .backgrounds: String(localized: "Custom Backgrounds")
         case .settings: String(localized: "Settings")
+        case .projects: String(localized: "Projects and Drafts")
         }
     }
 
@@ -36,6 +38,7 @@ enum StorageKind: String, CaseIterable, Identifiable, Sendable {
         case .widget: "square.grid.2x2"
         case .backgrounds: "photo.artframe"
         case .settings: "gearshape"
+        case .projects: "doc.on.doc"
         }
     }
 
@@ -86,8 +89,9 @@ enum StorageService {
             .captureLine: [lineFolder],
             .cache: [cacheFolder],
             .widget: WidgetSnapshotService.widgetDirectories(),
-            .backgrounds: [appSupport.appendingPathComponent("Backgrounds", isDirectory: true)],
-            .settings: [appSupport.appendingPathComponent("settings.json")]
+            .backgrounds: [appSupport.appendingPathComponent("Backgrounds", isDirectory: true), appSupport.appendingPathComponent("Project Backgrounds")],
+            .settings: [appSupport.appendingPathComponent("settings.json"), appSupport.appendingPathComponent("Workspace.json")],
+            .projects: [ProjectStore.directory, appSupport.appendingPathComponent("SearchIndex.json")]
         ]
     }
 

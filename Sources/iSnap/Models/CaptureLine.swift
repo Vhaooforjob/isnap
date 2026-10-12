@@ -47,6 +47,7 @@ final class CaptureLine: ObservableObject {
 
     /// Opens a capture in the iSnap editor.
     var onEdit: ((URL) -> Void)?
+    var onPin: ((URL) -> Void)?
     /// Builds the Share menu for a capture.
     var shareMenu: ((URL) -> NSMenu)?
     /// Called just before a card starts falling, so the fall can be drawn

@@ -21,17 +21,20 @@ struct ContentView: View {
         }
         .frame(minWidth: 940, minHeight: 680)
         .task { await model.reloadLibrary() }
-        .sheet(isPresented: $model.isShowingSettings) {
-            SettingsView(store: model.settings).environmentObject(model)
-        }
         .sheet(isPresented: $model.isShowingWindowPicker) {
             WindowPickerView().environmentObject(model)
         }
         .sheet(isPresented: $model.isShowingParsedData) {
             ScreenshotParseView(text: $model.recognizedText, sourceName: model.recognizedSourceName)
         }
+        .sheet(isPresented: $model.isShowingBatchExport) {
+            BatchExportView().environmentObject(model)
+        }
+        .sheet(isPresented: $model.isShowingRedactionReview) {
+            RedactionReviewView().environmentObject(model)
+        }
         .alert("iSnap", isPresented: Binding(
-            get: { model.errorMessage != nil },
+            get: { model.errorMessage != nil && !model.isShowingSettings },
             set: { if !$0 { model.errorMessage = nil } }
         )) {
             Button("OK", role: .cancel) { model.errorMessage = nil }
@@ -43,7 +46,10 @@ struct ContentView: View {
         } message: {
             Text("macOS has not applied Screen Recording access to this running copy of iSnap. If the switch is already enabled, restart iSnap. Otherwise open System Settings and enable it first.")
         }
-        .alert(item: $model.releaseInfo) { release in
+        .alert(item: Binding(
+            get: { model.isShowingSettings ? nil : model.releaseInfo },
+            set: { model.releaseInfo = $0 }
+        )) { release in
             Alert(
                 title: Text("iSnap \(release.tagName) is available"),
                 message: Text(release.body ?? String(localized: "A newer version is ready to download.")),

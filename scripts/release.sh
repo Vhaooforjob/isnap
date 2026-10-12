@@ -7,6 +7,8 @@ APP="iSnap"
 cd "$(dirname "$0")/.."
 
 VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "Sources/$APP/Resources/Info.plist")
+BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "Sources/$APP/Resources/Info.plist")
+SOURCE_COMMIT=$(git rev-parse HEAD)
 DERIVED="build/DerivedDataRelease"
 OUT="dist"
 STAGE="build/release-stage"
@@ -22,6 +24,15 @@ xcodebuild -project "$APP.xcodeproj" -scheme "$APP" -configuration Release \
 
 mkdir -p "$OUT" "$STAGE"
 ditto "$DERIVED/Build/Products/Release/$APP.app" "$STAGE/$APP.app"
+# Ship the licenses with both binary distributions, inside the signed bundle.
+mkdir -p "$STAGE/$APP.app/Contents/Resources"
+cp LICENSE "$STAGE/$APP.app/Contents/Resources/LICENSE"
+cp THIRD_PARTY_NOTICES.md "$STAGE/$APP.app/Contents/Resources/THIRD_PARTY_NOTICES.md"
+cat > "$STAGE/$APP.app/Contents/Resources/BUILD_INFO.txt" <<EOF
+iSnap $VERSION (build $BUILD)
+Source commit: $SOURCE_COMMIT
+Architectures: arm64, x86_64
+EOF
 # Ad-hoc sign inside-out: app extensions first, then the app, each with its own entitlements.
 for appex in "$STAGE/$APP.app"/Contents/PlugIns/*.appex; do
   [ -e "$appex" ] || continue
@@ -37,4 +48,4 @@ ditto -c -k --keepParent "$STAGE/$APP.app" "$OUT/$NAME.zip"
 
 ln -s /Applications "$STAGE/Applications"
 hdiutil create -volname "$APP $VERSION" -srcfolder "$STAGE" -ov -format UDZO "$OUT/$NAME.dmg" >/dev/null
-(cd "$OUT" && shasum -a 256 "$NAME.dmg" "$NAME.zip")
+(cd "$OUT" && shasum -a 256 "$NAME.dmg" "$NAME.zip" | tee "$NAME-SHA256SUMS.txt")

@@ -4,6 +4,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject var store: SettingsStore
+    var onClose: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var r2AccessKey = ""
     @State private var r2SecretKey = ""
@@ -72,12 +73,30 @@ struct SettingsView: View {
                 HStack {
                     Text("Settings are saved automatically.").font(.caption).foregroundStyle(.secondary)
                     Spacer()
-                    Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
+                    Button("Done", action: close).keyboardShortcut(.defaultAction)
                 }
                 .padding(12)
             }
         }
         .frame(minWidth: 700, minHeight: 510)
+        .onExitCommand(perform: close)
+        .alert("iSnap", isPresented: Binding(
+            get: { model.isShowingSettings && model.errorMessage != nil },
+            set: { if !$0 { model.errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { model.errorMessage = nil }
+        } message: { Text(model.errorMessage ?? String(localized: "Unknown error")) }
+        .alert(item: Binding(
+            get: { model.isShowingSettings ? model.releaseInfo : nil },
+            set: { model.releaseInfo = $0 }
+        )) { release in
+            Alert(
+                title: Text("iSnap \(release.tagName) is available"),
+                message: Text(release.body ?? String(localized: "A newer version is ready to download.")),
+                primaryButton: .default(Text("Open Download")) { NSWorkspace.shared.open(release.htmlURL) },
+                secondaryButton: .cancel()
+            )
+        }
         .onAppear {
             store.value.startup.launchAtLogin = LaunchAtLoginService.isEnabled
             r2AccessKey = KeychainStore.shared.value(for: .r2AccessKeyID) ?? ""
@@ -98,6 +117,10 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    private func close() {
+        if let onClose { onClose() } else { dismiss() }
     }
 
     private var hotkeys: some View {

@@ -47,7 +47,7 @@ actor CaptureService {
         }
     }
 
-    func captureAllDisplays() async throws -> CaptureResult {
+    func captureAllDisplays(showsCursor: Bool = false) async throws -> CaptureResult {
         let content = try await shareableContent(excludingDesktopWindows: false, onScreenWindowsOnly: true)
         guard !content.displays.isEmpty else { throw CaptureError.displayUnavailable }
 
@@ -71,7 +71,7 @@ actor CaptureService {
             let configuration = SCStreamConfiguration()
             configuration.width = Int(CGFloat(display.width) * displayScale)
             configuration.height = Int(CGFloat(display.height) * displayScale)
-            configuration.showsCursor = false
+            configuration.showsCursor = showsCursor
             configuration.captureResolution = .best
             let image = try await SCScreenshotManager.captureImage(
                 contentFilter: filter,
@@ -98,7 +98,7 @@ actor CaptureService {
         return try await shareableContent(excludingDesktopWindows: false, onScreenWindowsOnly: true).displays
     }
 
-    func capture(displayID: CGDirectDisplayID, region: CGRect? = nil) async throws -> CaptureResult {
+    func capture(displayID: CGDirectDisplayID, region: CGRect? = nil, showsCursor: Bool = false, excludingOwnWindows: Bool = false) async throws -> CaptureResult {
         let content = try await shareableContent(excludingDesktopWindows: false, onScreenWindowsOnly: true)
         guard let display = content.displays.first(where: { $0.displayID == displayID }) else {
             throw CaptureError.displayUnavailable
@@ -113,9 +113,12 @@ actor CaptureService {
             configuration.width = Int(CGFloat(display.width) * scale)
             configuration.height = Int(CGFloat(display.height) * scale)
         }
-        configuration.showsCursor = false
+        configuration.showsCursor = showsCursor
         configuration.captureResolution = .best
-        let filter = SCContentFilter(display: display, excludingWindows: [])
+        let excluded = excludingOwnWindows ? content.windows.filter {
+            $0.owningApplication?.processID == ProcessInfo.processInfo.processIdentifier
+        } : []
+        let filter = SCContentFilter(display: display, excludingWindows: excluded)
         let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration)
         return CaptureResult(
             image: NSImage(cgImage: image, size: CGSize(width: image.width, height: image.height)),
@@ -160,7 +163,7 @@ actor CaptureService {
             }
     }
 
-    func capture(windowID: CGWindowID) async throws -> CaptureResult {
+    func capture(windowID: CGWindowID, showsCursor: Bool = false) async throws -> CaptureResult {
         let content = try await shareableContent(excludingDesktopWindows: true, onScreenWindowsOnly: false)
         guard let window = content.windows.first(where: { $0.windowID == windowID }) else {
             throw CaptureError.windowUnavailable
@@ -169,7 +172,7 @@ actor CaptureService {
         let scale = await MainActor.run { Self.windowScale(for: window.frame) }
         configuration.width = max(1, Int(window.frame.width * scale))
         configuration.height = max(1, Int(window.frame.height * scale))
-        configuration.showsCursor = false
+        configuration.showsCursor = showsCursor
         configuration.captureResolution = .best
         configuration.ignoreShadowsSingleWindow = false
         let filter = SCContentFilter(desktopIndependentWindow: window)

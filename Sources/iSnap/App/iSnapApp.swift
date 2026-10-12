@@ -32,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     weak var model: AppModel? {
         didSet {
             model?.presentMainWindow = { [weak self] in self?.showApp() }
+            model?.presentSettings = { [weak self] in self?.showSettings() }
             model?.captureLineController.onRevealedChange = { [weak self] isRevealed in
                 self?.setDockIconVisible(isRevealed)
             }
@@ -48,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     private var windowMenuItem: NSMenuItem?
     private var lineNowMenuItem: NSMenuItem?
     private var mainWindow: NSWindow?
+    private var settingsPanel: NSPanel?
     private var appliedStartupVisibility = false
     private var pendingDeepLinks: [URL] = []
 
@@ -57,10 +59,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        model?.saveDraft()
         model?.stopCaptureLine()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        model?.preserveCurrentDraft() == false ? .terminateCancel : .terminateNow
+    }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag { sender.windows.first?.makeKeyAndOrderFront(nil) }
@@ -69,7 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
-        for url in urls where url.scheme == "isnap" {
+        for url in urls where url.scheme == "isnap" || (url.isFileURL && url.pathExtension.lowercased() == "isnap") {
             if model == nil {
                 pendingDeepLinks.append(url)
             } else {
@@ -160,6 +167,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         return true
     }
 
+    func windowWillClose(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow, window === settingsPanel else { return }
+        model?.isShowingSettings = false
+        // Release the view so cloud refresh tasks stop and credentials are reloaded next time.
+        settingsPanel?.contentView = nil
+    }
+
     @objc func showApp() {
         NSApp.unhide(nil)
         mainWindow?.makeKeyAndOrderFront(nil)
@@ -198,13 +212,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     @objc private func showSettings() {
-        showApp()
-        model?.isShowingSettings = true
+        guard let model else { return }
+        if settingsPanel == nil {
+            let panel = NSPanel(
+                contentRect: NSRect(x: 0, y: 0, width: 760, height: 560),
+                styleMask: [.titled, .closable], backing: .buffered, defer: false
+            )
+            panel.identifier = NSUserInterfaceItemIdentifier("iSnap.settings")
+            panel.title = String(localized: "Settings")
+            panel.isReleasedWhenClosed = false
+            panel.hidesOnDeactivate = false
+            panel.level = .floating
+            panel.delegate = self
+            panel.center()
+            settingsPanel = panel
+        }
+        guard let panel = settingsPanel else { return }
+        if panel.contentView == nil || !model.isShowingSettings {
+            panel.contentView = NSHostingView(rootView:
+                SettingsView(store: model.settings, onClose: { [weak panel] in panel?.close() })
+                    .environmentObject(model)
+            )
+        }
+        // Activating a hidden app must not restore its editor along with Settings.
+        if NSApp.isHidden { mainWindow?.orderOut(nil) }
+        model.isShowingSettings = true
+        panel.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func handleDeepLink(_ url: URL) {
         guard let model else { return }
         showApp()
+        if url.isFileURL, url.pathExtension.lowercased() == "isnap" {
+            model.openProject(at: url)
+            return
+        }
         switch url.host {
         case "editor":
             model.section = .editor
@@ -265,22 +308,28 @@ private struct WindowAccessor: NSViewRepresentable {
 }
 
 private struct iSnapCommands: Commands {
-    let model: AppModel
+    @ObservedObject private var model: AppModel
     @ObservedObject private var settings: SettingsStore
 
     init(model: AppModel) {
-        self.model = model
+        _model = ObservedObject(wrappedValue: model)
         _settings = ObservedObject(wrappedValue: model.settings)
     }
 
     var body: some Commands {
+        CommandGroup(replacing: .appSettings) {
+            Button("Settings…", action: model.showSettings).keyboardShortcut(",")
+        }
         CommandGroup(replacing: .newItem) {
             Button("Open Image…", action: model.openImage).keyboardShortcut("o")
+            Button("Open Project…", action: model.openProject)
             Button("Paste Image", action: model.pasteImage).keyboardShortcut("v")
             Button("Insert Image Overlay…", action: model.insertOverlayImage)
                 .disabled(model.document.image == nil)
         }
         CommandGroup(replacing: .saveItem) {
+            Button("Save Project…", action: model.saveProject).keyboardShortcut("s", modifiers: [.command, .option])
+                .disabled(model.document.image == nil)
             Button("Save Edited Image", action: model.quickSave)
                 .editorKeyboardShortcut(EditorKeyboardShortcut.parse(settings.value.hotkeys.saveEditedImage))
                 .disabled(model.document.image == nil)
@@ -310,6 +359,10 @@ private struct iSnapCommands: Commands {
             Button("Region") { Task { await model.capture(.region) } }
             Button("Window") { Task { await model.capture(.window) } }
             Button("All Displays") { Task { await model.capture(.allDisplays) } }
+            Button("Capture Last Region") { Task { await model.captureLastRegion() } }
+                .disabled(model.lastRegion == nil || model.isCapturing)
+            Button("Scrolling Capture…") { Task { await model.beginScrollingCapture() } }
+                .disabled(model.isCapturing)
             Divider()
             Button("Extract Text from Screenshot") { Task { await model.parseScreenshot() } }
                 .disabled(model.document.image == nil || model.isParsingScreenshot)

@@ -37,8 +37,9 @@ enum CaptureMode: String, CaseIterable, Identifiable, Codable {
 }
 
 enum EditorTool: String, CaseIterable, Identifiable, Codable {
-    case select, crop, rectangle, ellipse, arrow, line, text, spotlight, number, image
+    case select, crop, rectangle, ellipse, arrow, line, text, spotlight, number, image, redact, blur, pixelate
 
+    var isPrivacyMask: Bool { self == .redact || self == .blur || self == .pixelate }
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -52,6 +53,9 @@ enum EditorTool: String, CaseIterable, Identifiable, Codable {
         case .spotlight: String(localized: "Spotlight")
         case .number: String(localized: "Number")
         case .image: String(localized: "Image")
+        case .redact: String(localized: "Redact")
+        case .blur: String(localized: "Blur")
+        case .pixelate: String(localized: "Pixelate")
         }
     }
     var symbol: String {
@@ -66,6 +70,9 @@ enum EditorTool: String, CaseIterable, Identifiable, Codable {
         case .spotlight: "lightbulb"
         case .number: "number.circle"
         case .image: "photo.on.rectangle"
+        case .redact: "rectangle.fill"
+        case .blur: "drop.halffull"
+        case .pixelate: "square.grid.3x3.fill"
         }
     }
 }

@@ -45,6 +45,19 @@ The menu bar icon gives you everything without opening the window:
 
 You can also **Open…** (`⌘O`) or **Paste** (`⌘V`) an image into the editor.
 
+The **timer menu** in the capture toolbar adds **Capture Last Region**, a **3/5/10-second delay**, and **Include cursor**. The last region is kept for the current app session and checked against the connected display before reuse. Delays apply to screen, region, window, all-displays, and repeat-region captures.
+
+### Scrolling capture
+
+Choose **Scrolling Capture…** in the timer menu or the Capture menu. Select a region containing the scrolling content, leaving fixed headers and scrollbars outside it. iSnap takes the first frame and opens a floating control panel.
+
+1. Scroll **down manually in the source app**, keeping part of the previous frame visible.
+2. Click **Capture Next**. The panel hides while the image is taken.
+3. Review the stitched preview. Adjust **Overlap (px)** if the suggested seam is wrong, then choose **Add Frame**. **Discard Frame** retries without changing the accepted frames.
+4. Repeat, then **Finish** to send the combined image to the normal editor, Library and Capture Line workflow. **Remove Last** undoes the last accepted frame; **Cancel** discards the session.
+
+This captures a fixed region vertically; it does not drive app scrolling automatically. Animated content, repeated patterns and sticky elements may need manual overlap adjustment. The output is limited to 60,000 pixels high and 80 million pixels in total.
+
 After a capture:
 
 - The editor opens with the image (turn this off in **Settings → Capture Line → Open the editor after each capture**).
@@ -70,12 +83,27 @@ All shortcuts can be changed in **Settings → Hotkeys**: click a shortcut, then
 | Text | `T` | Click to place, then type in the popup. Double-click to edit later. |
 | Number | `N` | Auto-numbered markers. Edit to switch to A, B, C or a, b, c, or to set the next value. |
 | Spotlight | `S` | Dims everything outside the shape. |
+| Redact | toolbar | Covers a rectangle with opaque black. |
+| Blur | toolbar | Blurs the selected rectangle. |
+| Pixelate | toolbar | Pixelates the selected rectangle. |
 
 Also in the toolbar: **Insert Image** (an overlay with its own opacity), **Sticker** (emoji stickers), **Undo**/**Redo**, zoom (pinch on a trackpad, or the zoom buttons; **Fit** resets), **Copy**, **Share**, and **Save**.
+
+The **… menu → Suggest Redactions…** scans the image on device for lines containing email addresses or phone numbers. Select the suggestions to apply; iSnap covers the whole selected line with opaque black. Review the image for information the detector missed. Use **Redact** when text must be completely covered; blur and pixelation are visual effects. Masks remain editable inside the project and are flattened into exported/copied images.
+
+### Editable projects and recovery
+
+**… → Save Project…** (`⌥⌘S`) stores a `.isnap` file containing the source image, editable annotations, crop state, canvas and embedded image assets. **Open Project…**, or double-clicking the project in Finder, restores those layers. Regular **Save** and **Export** still produce PNG/JPEG images.
+
+iSnap saves the active draft shortly after changes and preserves the previous document before replacing it. It restores the latest session when launched. **… → Recent Drafts** opens previous documents; **Show Drafts in Finder** lets you manage the saved files. If preserving a draft fails, the editor keeps the current document. Drafts live in `~/Library/Application Support/iSnap/Drafts` and are not removed by Clear Cache.
+
+Projects and drafts retain the original pixels, including content underneath redactions. Share the exported PNG/JPEG when you intend to share only the rendered result.
 
 ### Canvas panel
 
 The panel on the right styles the exported image:
+
+- **Saved Presets:** name and save the current canvas configuration, then apply it with one click. Presets include custom backgrounds and watermarks; the trash button removes a preset.
 
 - **Layout:** output ratio (Auto, 1:1, 4:3, 3:2, 16:9, 5:3, 9:16, 3:4, 2:3), padding, inset, corner radius, and shadow.
 - **Background:** show or hide it, pick one of 24 gradients, or **Add Image…** for your own (up to eight are kept).
@@ -155,7 +183,15 @@ The same Share menu is available on Capture Line cards, in the editor toolbar an
 
 ## Library and widgets
 
-The **Library** shows every image in your Quick Save folder (default `~/Pictures/iSnap`), newest first. Double-click to open one in the editor; right-click for **Share…**, **Reveal in Finder**, and **Move to Trash**. **Move All to Trash** asks first and can be undone from the Trash. The most recent captures also appear in the **Recent** bar above the editor.
+Use the Library search field to match filenames, tags or recognized text in images. OCR indexing runs locally in the background; an indexing indicator shows progress. **Refresh** retries images that could not be indexed. Very small text may not survive the bounded-resolution image used for indexing.
+
+Use the star to mark favorites, filter by the last 7 or 30 days (file modification date), and choose **Edit Tags** to add comma-separated tags. Tags and favorites are stored locally by file path. Moving or renaming files outside iSnap does not migrate their tags automatically.
+
+Click a checkbox or Command-click to select multiple images. **Select All** selects the currently filtered results. **Batch Export…** exports those images to a chosen folder with an optional saved preset or current canvas/watermark, PNG/JPEG format, maximum dimension and filename prefix. Leave the prefix blank to keep source names. Existing files are never overwritten; colliding names receive a suffix. **Stop Export** keeps files already completed. Batch export operates on the saved images in the Library, not unsaved editor layers.
+
+**Pin on Screen** is available in the Library and Capture Line context menus, and in the editor's **… menu**. Each image floats above normal windows, with opacity, position/size lock, and a close button. Pinned images are independent of the source file and last for the current app session.
+
+The **Library** shows every image in your Quick Save folder (default `~/Pictures/iSnap`), newest first. Double-click to open one in the editor; right-click for **Share…**, **Reveal in Finder**, and **Move to Trash**. Select images and choose **Move to Trash** to remove them together after confirmation; they can be recovered from the Trash. The most recent captures also appear in the **Recent** bar above the editor.
 
 <p align="center"><img src="assets/screenshots/library.png" width="820" alt="The Library"></p>
 
@@ -178,6 +214,8 @@ Configure services in **Settings → Cloud**. Credentials and tokens are stored 
 Upload from the editor status bar (**Upload**) or from any Share menu (**Upload and Copy Link**).
 
 ## Settings
+
+Open **Settings…** from the menu bar, the editor's gear button, or `⌘,`. Settings opens in a single independent popup without opening the editor. Repeating the command focuses that popup. Close it with **Done**, `Esc`, or the close button.
 
 | Tab | What you can change |
 | --- | --- |

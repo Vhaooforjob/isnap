@@ -28,6 +28,9 @@ final class AppModel: ObservableObject {
     @Published var isShowingParsedData = false
     @Published var recognizedText = ""
     @Published var recognizedSourceName = String(localized: "Screenshot")
+    @Published var sensitiveRegions: [RecognizedRegion] = []
+    @Published var isShowingRedactionReview = false
+    var redactionSource: NSImage?
     @Published var r2Connected = false
     @Published var googleDriveConnected = false
     @Published var docVaultConnected = false
@@ -38,15 +41,35 @@ final class AppModel: ObservableObject {
     @Published var storageUsage: StorageUsage?
     @Published var isMeasuringStorage = false
 
+    let features: WorkspaceFeatures
+    let searchIndex = LibrarySearchIndex()
+    let pinnedImages = PinnedImageController()
+    let scrollCapture = ScrollCaptureController()
+    @Published var indexedText: [URL: String] = [:]
+    @Published var indexingProgress = ""
+    @Published var isIndexing = false
+    @Published var isBatchExporting = false
+    @Published var batchProgress = ""
+    @Published var isShowingBatchExport = false
+    @Published var batchItems: [LibraryItem] = []
+    @Published var drafts: [URL] = []
+    @Published var lastRegion: ScreenSelection?
+    var indexTask: Task<Void, Never>?
+    var batchTask: Task<Void, Never>?
+    var draftID = UUID()
+    var isRestoringProject = false
     let document = EditorDocument()
     let settings: SettingsStore
     let captureLine: CaptureLine
     let captureLineController: CaptureLineController
     var presentMainWindow: (() -> Void)?
+    var presentSettings: (() -> Void)?
 
-    private let captureService = CaptureService()
-    private let regionCoordinator = RegionCaptureCoordinator()
-    private let exportService = ExportService()
+    func showSettings() { presentSettings?() }
+
+    let captureService = CaptureService()
+    let regionCoordinator = RegionCaptureCoordinator()
+    let exportService = ExportService()
     private let libraryService = LibraryService()
     private let updateService = UpdateService()
     private let r2Uploader = R2Uploader()
@@ -58,14 +81,15 @@ final class AppModel: ObservableObject {
     private var widgetPublishTask: Task<Void, Never>?
     /// False for a model built around demo data (documentation renders):
     /// no hotkeys, no Keychain or network checks, no widget publishing.
-    private let connectsServices: Bool
+    let connectsServices: Bool
 
-    init(settings: SettingsStore? = nil, captureLine: CaptureLine? = nil, connectsServices: Bool = true) {
+    init(settings: SettingsStore? = nil, captureLine: CaptureLine? = nil, connectsServices: Bool = true, features: WorkspaceFeatures? = nil) {
         let settings = settings ?? SettingsStore()
         let captureLine = captureLine ?? CaptureLine()
         self.settings = settings
         self.captureLine = captureLine
         self.connectsServices = connectsServices
+        self.features = features ?? WorkspaceFeatures()
         captureLineController = CaptureLineController(line: captureLine)
         document.canvas = settings.value.canvas
         hotkeys.onHotkey = { [weak self] mode in
@@ -80,7 +104,16 @@ final class AppModel: ObservableObject {
         captureLine.shareMenu = { [weak self] url in
             self?.shareMenu(for: url) ?? NSMenu()
         }
+        captureLine.onPin = { [weak self] url in self?.pinImage(at: url) }
+        self.features.objectWillChange.sink { [weak self] in self?.objectWillChange.send() }.store(in: &cancellables)
+        self.features.$errorMessage.compactMap { $0 }.sink { [weak self] in self?.errorMessage = $0 }.store(in: &cancellables)
+        document.objectWillChange.sink { [weak self] in self?.objectWillChange.send() }.store(in: &cancellables)
         guard connectsServices else { return }
+        restoreLatestDraft()
+        document.$revision.dropFirst()
+            .debounce(for: .milliseconds(700), scheduler: RunLoop.main)
+            .sink { [weak self] _ in self?.saveDraft() }
+            .store(in: &cancellables)
         Task { await refreshStorage() }
         hotkeys.register(settings.value.hotkeys)
         Task {
@@ -116,15 +149,15 @@ final class AppModel: ObservableObject {
                     throw CaptureError.displayUnavailable
                 }
                 NSApp.hide(nil)
-                try await Task.sleep(for: .milliseconds(180))
-                result = try await captureService.capture(displayID: displayID)
+                try await waitForCapture()
+                result = try await captureService.capture(displayID: displayID, showsCursor: features.state.showsCursor)
                 origin = screen.frame
                 NSApp.unhide(nil)
             case .allDisplays:
                 let screen = NSScreen.underPointer
                 NSApp.hide(nil)
-                try await Task.sleep(for: .milliseconds(180))
-                result = try await captureService.captureAllDisplays()
+                try await waitForCapture()
+                result = try await captureService.captureAllDisplays(showsCursor: features.state.showsCursor)
                 origin = screen?.frame
                 NSApp.unhide(nil)
             case .region:
@@ -135,7 +168,9 @@ final class AppModel: ObservableObject {
                     guard let selection = await regionCoordinator.selectRegion() else {
                         throw CaptureError.cancelled
                     }
-                    result = try await captureService.capture(displayID: selection.displayID, region: selection.rect)
+                    lastRegion = selection
+                    try await waitForCapture()
+                    result = try await captureService.capture(displayID: selection.displayID, region: selection.rect, showsCursor: features.state.showsCursor)
                     origin = Self.screenRect(of: selection)
                 } catch {
                     visibleWindows.forEach { $0.makeKeyAndOrderFront(nil) }
@@ -173,7 +208,8 @@ final class AppModel: ObservableObject {
         do {
             NSApp.hide(nil)
             try await Task.sleep(for: .milliseconds(150))
-            let result = try await captureService.capture(windowID: window.id)
+            try await waitForCapture()
+            let result = try await captureService.capture(windowID: window.id, showsCursor: features.state.showsCursor)
             NSApp.unhide(nil)
             accept(result, isCapture: true, capturedFrom: ScreenshotFolderWatcher.appKitRect(fromTopLeftGlobal: window.frame))
         } catch {
@@ -324,6 +360,7 @@ final class AppModel: ObservableObject {
             try FileManager.default.createDirectory(at: settings.value.quickSave.folder, withIntermediateDirectories: true)
             let items = try await libraryService.items(in: settings.value.quickSave.folder)
             libraryItems = items
+            if connectsServices { startIndexing(items) }
             guard connectsServices else { return }
             widgetPublishTask?.cancel()
             widgetPublishTask = Task(priority: .utility) { [libraryService] in
@@ -339,12 +376,7 @@ final class AppModel: ObservableObject {
     }
 
     func deleteLibraryItem(_ item: LibraryItem) async {
-        do {
-            try await libraryService.delete(item, rootFolder: settings.value.quickSave.folder)
-            captureLine.prune()
-            await reloadLibrary()
-            statusText = String(localized: "Moved \(item.name) to Trash")
-        } catch { report(error) }
+        await deleteLibraryItems([item])
     }
 
     func deleteAllLibraryItems() async {
@@ -357,6 +389,21 @@ final class AppModel: ObservableObject {
             await reloadLibrary()
             report(error)
         }
+    }
+
+    func deleteLibraryItems(_ items: [LibraryItem]) async {
+        var failures: [String] = []
+        for item in items {
+            do {
+                try await libraryService.delete(item, rootFolder: settings.value.quickSave.folder)
+                await searchIndex.remove([item.url])
+                indexedText.removeValue(forKey: item.url)
+                features.state.metadata.removeValue(forKey: item.url.standardizedFileURL.path)
+            } catch { failures.append("\(item.name): \(error.localizedDescription)") }
+        }
+        captureLine.prune()
+        await reloadLibrary()
+        if !failures.isEmpty { errorMessage = failures.joined(separator: "\n") }
     }
 
     func revealLibrary() {
@@ -662,7 +709,7 @@ final class AppModel: ObservableObject {
     /// - Parameters:
     ///   - isCapture: a fresh screen capture, as opposed to an opened or pasted image.
     ///   - origin: the captured area in screen coordinates, where the Capture Line flight starts.
-    private func accept(_ result: CaptureResult, isCapture: Bool = false, capturedFrom origin: CGRect? = nil) {
+    func accept(_ result: CaptureResult, isCapture: Bool = false, capturedFrom origin: CGRect? = nil) {
         let lineSettings = settings.value.captureLine
         let hangsOnLine = isCapture && lineSettings.isEnabled
         if !hangsOnLine || lineSettings.opensEditorAfterCapture {
@@ -691,7 +738,9 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func loadIntoEditor(_ result: CaptureResult) {
+    func loadIntoEditor(_ result: CaptureResult) {
+        guard preserveCurrentDraft() else { return }
+        draftID = UUID()
         document.load(result)
         recognizedText = ""
         isShowingParsedData = false

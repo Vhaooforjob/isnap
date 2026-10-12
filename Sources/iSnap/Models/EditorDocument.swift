@@ -21,7 +21,10 @@ final class EditorDocument: ObservableObject {
     @Published private(set) var previewZoom: CGFloat = 1
     @Published var annotationEditRequest: AnnotationEditRequest?
     @Published private(set) var isCropApplied = false
-    @Published private(set) var isDirty = false
+    @Published private(set) var revision: UInt64 = 0
+    @Published private(set) var isDirty = false {
+        didSet { if isDirty { revision &+= 1 } }
+    }
 
     private var originalImage: NSImage?
     private var originalAnnotations: [Annotation] = []
@@ -86,6 +89,7 @@ final class EditorDocument: ObservableObject {
         tool = .select
         previewZoom = 1
         annotationEditRequest = nil
+        revision &+= 1
     }
 
     func add(_ annotation: Annotation) {
@@ -104,6 +108,15 @@ final class EditorDocument: ObservableObject {
         guard let index = annotations.firstIndex(where: { $0.id == annotation.id }) else { return }
         if shouldCheckpoint { checkpoint() }
         annotations[index] = annotation
+        isDirty = true
+    }
+
+    func addPrivacyMasks(_ frames: [CGRect]) {
+        guard !frames.isEmpty else { return }
+        checkpoint()
+        annotations.append(contentsOf: frames.map { Annotation(type: .redact, frame: $0) })
+        selectedAnnotationID = annotations.last?.id
+        tool = .select
         isDirty = true
     }
 
@@ -189,6 +202,39 @@ final class EditorDocument: ObservableObject {
     }
 
     func markSaved() { isDirty = false }
+
+    func project() throws -> EditorProject {
+        guard let image else { throw ExportError.invalidImage }
+        return try EditorProject(sourceName: sourceName, image: ProjectStore.png(image),
+            originalImage: originalImage === image ? nil : originalImage.map(ProjectStore.png), annotations: annotations,
+            originalAnnotations: originalAnnotations, canvas: canvas,
+            backgroundImage: canvas.backgroundImageURL.map { try Data(contentsOf: $0) },
+            cropRect: cropRect, lastAppliedCrop: lastAppliedCrop, isCropApplied: isCropApplied)
+    }
+
+    func loadProject(_ project: EditorProject) throws {
+        guard project.version == 1 else { throw ProjectError.unsupportedVersion }
+        guard let image = NSImage(data: project.image) else { throw ExportError.invalidImage }
+        let original = project.originalImage.flatMap(NSImage.init(data:))
+        if project.originalImage != nil && original == nil { throw ExportError.invalidImage }
+        var configuration = project.canvas
+        if let data = project.backgroundImage {
+            let folder = ProjectStore.directory.deletingLastPathComponent().appendingPathComponent("Project Backgrounds")
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            // Content-addressed imports keep repeated draft restoration bounded.
+            let url = folder.appendingPathComponent(ProjectAsset.digest(data) + ".png")
+            if !FileManager.default.fileExists(atPath: url.path) { try data.write(to: url, options: .atomic) }
+            configuration.backgroundImageURL = url
+        }
+        load(CaptureResult(image: image, sourceName: project.sourceName))
+        originalImage = original ?? image
+        annotations = project.annotations
+        originalAnnotations = project.originalAnnotations
+        canvas = configuration
+        cropRect = project.cropRect
+        lastAppliedCrop = project.lastAppliedCrop
+        isCropApplied = project.isCropApplied
+    }
 
     func presentEditor(for annotation: Annotation, checkpointOnCommit: Bool = true) {
         guard annotation.type == .text || annotation.type == .number else { return }
