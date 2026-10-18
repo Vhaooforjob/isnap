@@ -9,6 +9,7 @@ enum CaptureLineLayout {
     static let ropeTop: CGFloat = 10
     static let catRopeTop: CGFloat = 56
     static let catRopeSag: CGFloat = 10
+    static let rabbitRopeTop: CGFloat = 82
     static let spacing: CGFloat = 174
     static let cardWidth: CGFloat = 150
     static let pinAbove: CGFloat = 9.5
@@ -22,16 +23,29 @@ enum CaptureLineLayout {
     /// The rope hangs as a parabola from edge to edge of the screen.
     static func sag(width: CGFloat) -> CGFloat { min(30, width * 0.018) }
 
-    static func ropeY(x: CGFloat, width: CGFloat) -> CGFloat {
-        guard width > 0 else { return ropeTop }
+    static func ropeTop(for style: CaptureLineStyle) -> CGFloat {
+        switch style {
+        case .classic: ropeTop
+        case .cats: catRopeTop
+        case .rabbits: rabbitRopeTop
+        case .spiderMan: 82
+        }
+    }
+
+    static func ropeY(x: CGFloat, width: CGFloat, style: CaptureLineStyle = .classic) -> CGFloat {
+        let top = ropeTop(for: style)
+        guard width > 0 else { return top }
         let fraction = x / width
-        return ropeTop + 4 * sag(width: width) * fraction * (1 - fraction)
+        let sag = ropeSag(width: width, style: style)
+        return top + 4 * sag * fraction * (1 - fraction)
+    }
+
+    static func ropeSag(width: CGFloat, style: CaptureLineStyle) -> CGFloat {
+        style == .classic ? sag(width: width) : catRopeSag
     }
 
     static func catRopeY(x: CGFloat, width: CGFloat) -> CGFloat {
-        guard width > 0 else { return catRopeTop }
-        let fraction = x / width
-        return catRopeTop + 4 * catRopeSag * fraction * (1 - fraction)
+        ropeY(x: x, width: width, style: .cats)
     }
 
     static func x(index: Int, count: Int, width: CGFloat) -> CGFloat {
@@ -52,9 +66,15 @@ enum CaptureLineLayout {
         return CGSize(width: size.width * scale, height: size.height * scale)
     }
 
-    static func cardSize(for size: CGSize) -> CGSize {
+    static func cardSize(for size: CGSize, style: CaptureLineStyle = .classic) -> CGSize {
         let photo = photoSize(for: size)
-        return CGSize(width: photo.width + cardInset * 2, height: photo.height + cardInset * 2)
+        let inset: CGFloat = style.usesIllustratedRope ? 2 : cardInset
+        return CGSize(width: photo.width + inset * 2, height: photo.height + inset * 2)
+    }
+
+    static func cardOffsetBelowTop(for style: CaptureLineStyle) -> CGFloat {
+        // Illustrated clips are 21 points high; classic clips are 26.
+        style.usesIllustratedRope ? 21 - 12 : cardOffsetBelowTop
     }
 }
 
@@ -70,13 +90,23 @@ struct CaptureLineView: View {
             ZStack(alignment: .topLeading) {
                 CaptureLineRope(
                     width: width,
-                    top: line.style == .cats ? CaptureLineLayout.catRopeTop : CaptureLineLayout.ropeTop,
-                    sag: line.style == .cats ? CaptureLineLayout.catRopeSag : CaptureLineLayout.sag(width: width),
+                    top: CaptureLineLayout.ropeTop(for: line.style),
+                    sag: CaptureLineLayout.ropeSag(width: width, style: line.style),
                     style: line.style
                 )
 
                 if line.style == .cats {
                     CatRopeArtwork(width: width, centers: catCenters)
+                        .transition(.opacity)
+                } else if line.style == .rabbits {
+                    RabbitRopeArtwork(width: width, isActive: line.isRevealed)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                        .transition(.opacity)
+                } else if line.style == .spiderMan {
+                    SpiderWebArtwork(width: width, isActive: line.isRevealed)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
                         .transition(.opacity)
                 }
 
@@ -92,26 +122,22 @@ struct CaptureLineView: View {
                 }
 
                 ForEach(Array(line.items.enumerated()), id: \.element.id) { index, item in
-                    if line.style == .cats {
-                        let x = CaptureLineLayout.x(index: index, count: line.items.count, width: width)
-                        let ropeY = CaptureLineLayout.catRopeY(x: x, width: width)
-                        let height = panelHeight - ropeY
-                        HangingCaptureView(item: item, line: line)
-                            .frame(width: CaptureLineLayout.cardWidth, height: height, alignment: .top)
-                            .position(x: x, y: ropeY - CaptureLineLayout.pinAbove + height / 2)
-                    } else {
-                        let x = CaptureLineLayout.x(index: index, count: line.items.count, width: width)
-                        let ropeY = CaptureLineLayout.ropeY(x: x, width: width)
-                        let height = panelHeight - ropeY
-                        HangingCaptureView(item: item, line: line)
-                            .frame(width: CaptureLineLayout.cardWidth, height: height, alignment: .top)
-                            .position(x: x, y: ropeY - CaptureLineLayout.pinAbove + height / 2)
-                    }
+                    let x = CaptureLineLayout.x(index: index, count: line.items.count, width: width)
+                    let ropeY = CaptureLineLayout.ropeY(x: x, width: width, style: line.style)
+                    let height = panelHeight - ropeY
+                    HangingCaptureView(item: item, line: line)
+                        .frame(width: CaptureLineLayout.cardWidth, height: height, alignment: .top)
+                        .position(x: x, y: ropeY - CaptureLineLayout.pinAbove + height / 2)
                 }
 
                 if line.style == .cats {
                     RunningCatView(width: width, isActive: line.isRevealed)
                         .allowsHitTesting(false)
+                        .zIndex(2)
+                } else if line.style == .rabbits {
+                    RunningRabbitView(width: width, isActive: line.isRevealed)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
                         .zIndex(2)
                 }
             }
@@ -237,8 +263,10 @@ private struct HangingCaptureView: View {
 
     var body: some View {
         VStack(spacing: -12) {
-            if line.style == .cats {
-                CaptureLinePawClip().zIndex(1)
+            if line.style == .spiderMan {
+                CaptureLineWebClip().zIndex(1)
+            } else if line.style.usesIllustratedRope {
+                CaptureLinePawClip(style: line.style).zIndex(1)
             } else {
                 CaptureLineClip().zIndex(1)
             }
@@ -262,18 +290,18 @@ private struct HangingCaptureView: View {
             .resizable()
             .interpolation(.high)
             .frame(width: photoSize.width, height: photoSize.height)
-            .clipShape(RoundedRectangle(cornerRadius: line.style == .cats ? 4 : photoRadius, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: line.style.usesIllustratedRope ? 4 : photoRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: line.style == .cats ? 4 : photoRadius, style: .continuous)
+                RoundedRectangle(cornerRadius: line.style.usesIllustratedRope ? 4 : photoRadius, style: .continuous)
                     .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5)
             )
             .captureLineCardSurface(style: line.style)
             .shadow(
-                color: line.style == .cats
+                color: line.style.usesIllustratedRope
                     ? Color(red: 0.38, green: 0.24, blue: 0.18).opacity(hovering ? 0.22 : 0.12)
                     : .black.opacity(hovering ? 0.26 : 0.18),
-                radius: line.style == .cats ? (hovering ? 7 : 4) : (hovering ? 14 : 10),
-                y: line.style == .cats ? (hovering ? 5 : 3) : (hovering ? 8 : 5)
+                radius: line.style.usesIllustratedRope ? (hovering ? 7 : 4) : (hovering ? 14 : 10),
+                y: line.style.usesIllustratedRope ? (hovering ? 5 : 3) : (hovering ? 8 : 5)
             )
             // Holding presses the card in slowly, building up to Markup.
             .scaleEffect(pressed ? 0.95 : (hovering ? 1.035 : 1), anchor: .top)
@@ -283,7 +311,7 @@ private struct HangingCaptureView: View {
                 // Drawn here, clicked through CaptureGrabView, which sits on top.
                 Image(systemName: "xmark")
                     .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(line.style == .cats ? Color(red: 0.40, green: 0.27, blue: 0.22) : .primary)
+                    .foregroundStyle(line.style.usesIllustratedRope ? Color(red: 0.40, green: 0.27, blue: 0.22) : .primary)
                     .frame(width: 20, height: 20)
                     .captureLineDecorativeSurface(style: line.style, circle: true)
                     .padding(3)
@@ -295,7 +323,7 @@ private struct HangingCaptureView: View {
                 // Share, mirroring the cross; also clicked through CaptureGrabView.
                 Image(systemName: "square.and.arrow.up")
                     .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(line.style == .cats ? Color(red: 0.40, green: 0.27, blue: 0.22) : .primary)
+                    .foregroundStyle(line.style.usesIllustratedRope ? Color(red: 0.40, green: 0.27, blue: 0.22) : .primary)
                     .offset(y: -1)
                     .frame(width: 20, height: 20)
                     .captureLineDecorativeSurface(style: line.style, circle: true)
@@ -373,7 +401,12 @@ private struct CaptureLineRope: View {
 
     var body: some View {
         Group {
-            if style == .cats {
+            if style == .spiderMan {
+                ZStack {
+                    path.stroke(Color(red: 0.16, green: 0.23, blue: 0.36).opacity(0.7), lineWidth: 3.5)
+                    path.stroke(Color.white.opacity(0.95), lineWidth: 1.6)
+                }
+            } else if style.usesIllustratedRope {
                 ZStack {
                     path.stroke(Color(red: 0.39, green: 0.25, blue: 0.19), style: StrokeStyle(lineWidth: 6, lineCap: .round))
                     path.stroke(Color(red: 0.91, green: 0.69, blue: 0.47), style: StrokeStyle(lineWidth: 4, lineCap: .round))
@@ -433,6 +466,8 @@ private struct CaptureLineClip: View {
 }
 
 private struct CaptureLinePawClip: View {
+    var style: CaptureLineStyle = .cats
+
     var body: some View {
         RoundedRectangle(cornerRadius: 4, style: .continuous)
             .fill(Color(red: 0.98, green: 0.83, blue: 0.76))
@@ -442,9 +477,15 @@ private struct CaptureLinePawClip: View {
                     .stroke(Color(red: 0.42, green: 0.27, blue: 0.22), lineWidth: 1.1)
             }
             .overlay {
-                Image(systemName: "pawprint.fill")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(Color(red: 0.48, green: 0.30, blue: 0.24))
+                Group {
+                    if style == .rabbits {
+                        CaptureLineCarrot().frame(width: 10, height: 15)
+                    } else {
+                        Image(systemName: "pawprint.fill")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(Color(red: 0.48, green: 0.30, blue: 0.24))
+                    }
+                }
             }
             .allowsHitTesting(false)
     }
@@ -473,7 +514,7 @@ private extension View {
 
     @ViewBuilder
     func captureLineDecorativeSurface(style: CaptureLineStyle, circle: Bool = false, capsule: Bool = false) -> some View {
-        if style == .cats {
+        if style.usesIllustratedRope {
             let shape: AnyShape = circle ? AnyShape(Circle())
                 : capsule ? AnyShape(Capsule())
                 : AnyShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
@@ -486,7 +527,15 @@ private extension View {
 
     @ViewBuilder
     func captureLineCardSurface(style: CaptureLineStyle) -> some View {
-        if style == .cats {
+        if style == .spiderMan {
+            padding(CaptureLineLayout.cardInset)
+                .captureLineGlass(cornerRadius: CaptureLineLayout.cardRadius)
+                .overlay(
+                    RoundedRectangle(cornerRadius: CaptureLineLayout.cardRadius)
+                        .strokeBorder(LinearGradient(colors: [.red.opacity(0.8), .blue.opacity(0.7)],
+                                                     startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                )
+        } else if style.usesIllustratedRope {
             padding(2)
                 .background(
                     RoundedRectangle(cornerRadius: 6, style: .continuous)

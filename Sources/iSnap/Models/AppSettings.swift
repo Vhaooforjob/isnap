@@ -187,13 +187,19 @@ struct AppSettings: Codable, Equatable {
 enum CaptureLineStyle: String, Codable, CaseIterable, Identifiable {
     case classic
     case cats
+    case rabbits
+    case spiderMan
 
     var id: String { rawValue }
+
+    var usesIllustratedRope: Bool { self == .cats || self == .rabbits }
 
     var title: String {
         switch self {
         case .classic: String(localized: "Classic")
         case .cats: String(localized: "Cats")
+        case .rabbits: String(localized: "Rabbits")
+        case .spiderMan: String(localized: "Spider-Man")
         }
     }
 }

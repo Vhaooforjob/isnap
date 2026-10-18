@@ -24,6 +24,7 @@
 		30AD25CD9F318BC1CEABA35B /* GoogleDriveUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D0658D45F80E9E554807C7F /* GoogleDriveUploader.swift */; };
 		31639E4FC5F895213DCFEF34 /* ScreenshotParseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A526904CA570FB8F6AE5543A /* ScreenshotParseView.swift */; };
 		333D7D755E2418135E5008FC /* LaunchAtLoginService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DCF65C7C004ABFEA3E6CE57 /* LaunchAtLoginService.swift */; };
+		392DFB3AFCF79F1CD3A73B2A /* SpiderWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02951E3C009E8223E99F53DA /* SpiderWebView.swift */; };
 		3937F3A20DDFDBDF713E67F7 /* ScrollCaptureController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27F08AAD9846EBBEEFE3389C /* ScrollCaptureController.swift */; };
 		3D435BB4A2D93B93F4085C59 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01E36F9109267CDC739302F5 /* ContentView.swift */; };
 		45AE26D63EC3F9B856C5C220 /* RegionCaptureCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B67308BEE94DF7F1E071C0C0 /* RegionCaptureCoordinator.swift */; };
@@ -55,6 +56,7 @@
 		BB6B2056F61439D7D8710A4B /* MarketingShotsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A8B3051CB22B872C916957F /* MarketingShotsTests.swift */; };
 		CA07CB97BC7405924B7204B6 /* HotkeyRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3314986780D4490B760B9DF /* HotkeyRecorder.swift */; };
 		CF4EBE024AC29C9DCAFBFCF8 /* PinnedImageController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 169D178861C2BEAA512D3235 /* PinnedImageController.swift */; };
+		CF9ECB6B332ECC4B5ED83AF7 /* RabbitRopeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9398B647A4101EC2F470E775 /* RabbitRopeView.swift */; };
 		D00E2A4EC6A9C1E801671B6C /* CaptureLineController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CE03EE3F154DD5F6C664185 /* CaptureLineController.swift */; };
 		D2E00C0F4FDD80EAAA5755F4 /* CaptureLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B341224EE77FA8B53C1DAD1 /* CaptureLine.swift */; };
 		D529B6522AA18B6F6475C195 /* AppModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3C42CB2810DF5639845FBE /* AppModels.swift */; };
@@ -103,6 +105,7 @@
 
 /* Begin PBXFileReference section */
 		01E36F9109267CDC739302F5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		02951E3C009E8223E99F53DA /* SpiderWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpiderWebView.swift; sourceTree = "<group>"; };
 		09F557AADDA78A880E09D3C6 /* CaptureToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureToolbar.swift; sourceTree = "<group>"; };
 		0CE03EE3F154DD5F6C664185 /* CaptureLineController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureLineController.swift; sourceTree = "<group>"; };
 		0D7B996939678DB3D930C8D6 /* ScrollingStitcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollingStitcher.swift; sourceTree = "<group>"; };
@@ -130,6 +133,7 @@
 		78D7EBA03B07BA282654F1AF /* WidgetSnapshotService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshotService.swift; sourceTree = "<group>"; };
 		7A8B3051CB22B872C916957F /* MarketingShotsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketingShotsTests.swift; sourceTree = "<group>"; };
 		90498EF8FA4197E9D59B5895 /* ProjectStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectStore.swift; sourceTree = "<group>"; };
+		9398B647A4101EC2F470E775 /* RabbitRopeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RabbitRopeView.swift; sourceTree = "<group>"; };
 		94E60C047181BABC8F0A0CD3 /* WindowPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPickerView.swift; sourceTree = "<group>"; };
 		A1D218FFEDB1F4757F90042A /* LibraryThumbnail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryThumbnail.swift; sourceTree = "<group>"; };
 		A3E5359B3D6BA8CB804FBFA9 /* CaptureLineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureLineTests.swift; sourceTree = "<group>"; };
@@ -312,10 +316,12 @@
 				A1D218FFEDB1F4757F90042A /* LibraryThumbnail.swift */,
 				CC2A93D0FE31F3EA6449DCE8 /* LibraryView.swift */,
 				169D178861C2BEAA512D3235 /* PinnedImageController.swift */,
+				9398B647A4101EC2F470E775 /* RabbitRopeView.swift */,
 				2F5B865DEDB7C083ED4287FC /* RedactionReviewView.swift */,
 				A526904CA570FB8F6AE5543A /* ScreenshotParseView.swift */,
 				27F08AAD9846EBBEEFE3389C /* ScrollCaptureController.swift */,
 				F69C342602FADCD08FA79C86 /* SettingsView.swift */,
+				02951E3C009E8223E99F53DA /* SpiderWebView.swift */,
 				94E60C047181BABC8F0A0CD3 /* WindowPickerView.swift */,
 			);
 			path = Views;
@@ -516,6 +522,7 @@
 				CF4EBE024AC29C9DCAFBFCF8 /* PinnedImageController.swift in Sources */,
 				26D57E99798464BB52CD4F3E /* ProjectStore.swift in Sources */,
 				B62CB0827A359E81CE35676C /* R2Uploader.swift in Sources */,
+				CF9ECB6B332ECC4B5ED83AF7 /* RabbitRopeView.swift in Sources */,
 				4DB1867126C7BCEAB5C83B48 /* RedactionReviewView.swift in Sources */,
 				45AE26D63EC3F9B856C5C220 /* RegionCaptureCoordinator.swift in Sources */,
 				DA85E083F62232D38D9FAF1C /* ScreenshotFolderWatcher.swift in Sources */,
@@ -526,6 +533,7 @@
 				DF00FE7AB936C04E3AA72A39 /* SettingsStore.swift in Sources */,
 				2C2A8951D883C85E29BB6E65 /* SettingsView.swift in Sources */,
 				FB734BFA8A817A1D510F84AC /* ShareService.swift in Sources */,
+				392DFB3AFCF79F1CD3A73B2A /* SpiderWebView.swift in Sources */,
 				FE03288B3D723A8B277126CE /* StorageService.swift in Sources */,
 				4A8BDDA26D3D07E001FD6B82 /* SystemMarkupService.swift in Sources */,
 				E7FAB9A6A0C507ED58853CB3 /* UpdateService.swift in Sources */,

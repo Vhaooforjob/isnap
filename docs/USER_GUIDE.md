@@ -129,7 +129,7 @@ Captures hang on a line tucked under the menu bar, ready to use without opening 
 
 <p align="center"><img src="assets/screenshots/capture-line-live.jpg" width="820" alt="Captures hanging on the Capture Line"></p>
 
-Choose **Classic** or **Cats** in **Settings → Capture Line → Line style**. Classic keeps the compact glass cards and cord. Cats adds a small animated cat decoration above screenshot cards; the screenshots fill their own cards and use the same capacity as Classic.
+Choose **Classic**, **Cats**, **Rabbits**, or **Spider-Man** in **Settings → Capture Line → Line style**. Classic keeps the compact glass cards and cord. Cats adds a small animated cat decoration above screenshot cards; the screenshots fill their own cards and use the same capacity as Classic. Rabbits adds three pastel bunnies, carrot clips, and a hopping rabbit chasing a carrot back and forth along the rope. Spider-Man uses white web strands, curved spiderwebs in the upper corners and along the line, and red and blue card borders. Small webs bloom at the ends of fired strands. Three mascots take turns shooting webs in distinct poses: standing with one hand, crouching with both hands, and lunging with one arm raised overhead. A fourth occasionally drops in upside down between them, bobs and swings, then retreats; its timing and position vary each visit. Both modes pause their animation while the line is hidden and respect Reduce Motion.
 
 ### Showing the line
 

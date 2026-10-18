@@ -42,8 +42,116 @@ final class CaptureLineTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(AppSettings.self, from: data), settings)
     }
 
+    func testEveryLineStylePersistsAndLegacySettingsStayClassic() throws {
+        for style in CaptureLineStyle.allCases {
+            var settings = AppSettings()
+            settings.captureLine.style = style
+            let data = try JSONEncoder().encode(settings)
+            XCTAssertEqual(try JSONDecoder().decode(AppSettings.self, from: data).captureLine.style, style)
+        }
+        let legacy = try JSONDecoder().decode(AppSettings.CaptureLineSettings.self, from: Data("{}".utf8))
+        XCTAssertEqual(legacy.style, .classic)
+    }
+
+    func testIllustratedCardsFitUnderTheRope() {
+        for style in CaptureLineStyle.allCases {
+            for width: CGFloat in [320, 1440, 3440] {
+                let y = CaptureLineLayout.ropeY(x: width / 2, width: width, style: style)
+                let card = CaptureLineLayout.cardSize(for: CGSize(width: 400, height: 1200), style: style)
+                let bottom = y - CaptureLineLayout.pinAbove + CaptureLineLayout.cardOffsetBelowTop(for: style) + card.height
+                XCTAssertLessThan(bottom, CaptureLineLayout.panelHeight, "\(style) at \(width)")
+                XCTAssertEqual(CaptureLineLayout.ropeY(x: 0, width: width, style: style), CaptureLineLayout.ropeTop(for: style))
+            }
+        }
+    }
+
+    func testRabbitChaseStaysOnScreenAndTurnsContinuously() {
+        for width: CGFloat in [0, 40, 320, 1440, 3440] {
+            for time in stride(from: 0.0, through: RabbitChaseLayout.cycle, by: 0.1) {
+                let pose = RabbitChaseLayout.pose(time: time, width: width)
+                XCTAssertTrue((0...width).contains(pose.rabbitX))
+                XCTAssertTrue((0...width).contains(pose.carrotX))
+                XCTAssertEqual(pose.headingRight, pose.carrotX >= pose.rabbitX)
+            }
+        }
+        for turn in [0.0, RabbitChaseLayout.cycle / 2, RabbitChaseLayout.cycle] {
+            let before = RabbitChaseLayout.pose(time: turn - 0.001, width: 1440)
+            let after = RabbitChaseLayout.pose(time: turn + 0.001, width: 1440)
+            XCTAssertEqual(before.rabbitX, after.rabbitX, accuracy: 0.01)
+            XCTAssertEqual(before.carrotX, after.carrotX, accuracy: 0.1)
+            XCTAssertGreaterThan(after.carrotLift, 15)
+        }
+        let right = RabbitChaseLayout.pose(time: RabbitChaseLayout.cycle / 4, width: 1440)
+        let left = RabbitChaseLayout.pose(time: RabbitChaseLayout.cycle * 3 / 4, width: 1440)
+        XCTAssertTrue(right.headingRight)
+        XCTAssertGreaterThan(right.carrotX - right.rabbitX, 42)
+        XCTAssertFalse(left.headingRight)
+        XCTAssertGreaterThan(left.rabbitX - left.carrotX, 42)
+    }
+
     func testToggleShortcutParses() {
         XCTAssertNotNil(GlobalHotkeyService.parse(AppSettings.HotkeySettings().toggleCaptureLine))
+    }
+
+    func testSpiderSurpriseEntersFromAboveAndLeavesCompletely() {
+        let event = SpiderDropEvent(start: 100, duration: 8, anchorFraction: 0.33,
+                                    depth: 24, bobAmplitude: 6, frequency: 3, phase: 0)
+        XCTAssertNil(SpiderSceneLayout.drop(time: 99, width: 900, event: event))
+        XCTAssertNil(SpiderSceneLayout.drop(time: 108, width: 900, event: event))
+        for time in [100.0, 107.999] {
+            let pose = SpiderSceneLayout.drop(time: time, width: 900, event: event)!
+            XCTAssertLessThan(pose.attachment.y + SpiderSceneLayout.dropSize.height, 0)
+        }
+        let heights = stride(from: 102.0, through: 106.0, by: 0.1).map {
+            SpiderSceneLayout.drop(time: $0, width: 900, event: event)!.attachment.y
+        }
+        let changes = zip(heights, heights.dropFirst()).map { $1 - $0 }
+        XCTAssertTrue(changes.contains { $0 > 0.5 })
+        XCTAssertTrue(changes.contains { $0 < -0.5 })
+    }
+
+    func testSpiderSurpriseAvoidsStandingCharactersAndCards() {
+        for width: CGFloat in [320, 900, 1600, 3440] {
+            for fraction: CGFloat in [0.305, 0.355, 0.645, 0.695] {
+                let event = SpiderDropEvent(start: 0, duration: 9, anchorFraction: fraction,
+                                            depth: 24, bobAmplitude: 6, frequency: 3.3, phase: 1)
+                for time in stride(from: 0.0, to: event.duration, by: 0.05) {
+                    let pose = SpiderSceneLayout.drop(time: time, width: width, event: event)!
+                    let angle = pose.angle * .pi / 180
+                    for x in [-SpiderSceneLayout.dropSize.width / 2, SpiderSceneLayout.dropSize.width / 2] {
+                        for y in [CGFloat.zero, SpiderSceneLayout.dropSize.height] {
+                            let point = CGPoint(x: pose.attachment.x + x * cos(angle) - y * sin(angle),
+                                                y: pose.attachment.y + x * sin(angle) + y * cos(angle))
+                            XCTAssertTrue((0...width).contains(point.x))
+                            XCTAssertLessThan(point.y, CaptureLineLayout.ropeY(x: point.x, width: width, style: .spiderMan))
+                            for center in SpiderSceneLayout.centers {
+                                XCTAssertGreaterThan(abs(point.x - width * center), SpiderSceneLayout.standingSize.width / 2)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    func testSpiderWebOnlyFiresWhileTheHandIsRaised() {
+        for index in 0..<3 {
+            var firingFrames = 0
+            var restingFrames = 0
+            for time in stride(from: 0.0, to: 6.0, by: 0.05) {
+                let shot = SpiderSceneLayout.shot(time: time, index: index)
+                XCTAssertTrue((0...1).contains(shot.reach))
+                XCTAssertTrue((0...1).contains(shot.opacity))
+                if shot.opacity > 0 {
+                    XCTAssertEqual(shot.aim, 1, accuracy: 0.001)
+                    firingFrames += 1
+                } else {
+                    restingFrames += 1
+                }
+            }
+            XCTAssertGreaterThan(firingFrames, 0)
+            XCTAssertGreaterThan(restingFrames, firingFrames)
+        }
     }
 
     func testHangIgnoresDuplicatesAndUnreadableFiles() throws {

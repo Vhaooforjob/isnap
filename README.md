@@ -28,7 +28,7 @@ Rectangles, ellipses, arrows (straight or curved), lines, text, numbered or lett
 
 ### The Capture Line
 
-Every capture flies up and hangs on a line tucked under the menu bar, including screenshots taken with `⇧⌘3/4/5` and clipboard screenshots (`⌃⇧⌘3/4`). Click a card to copy it, double-click to edit it in iSnap, press and hold for Markup, drag it into any app or folder, or use its share button. Choose the **Classic** or **Cats** line in Settings, pick **Show on Hover**, **Always Show**, or **Hide**, and toggle it any time with `⌃⌥T`.
+Every capture flies up and hangs on a line tucked under the menu bar, including screenshots taken with `⇧⌘3/4/5` and clipboard screenshots (`⌃⇧⌘3/4`). Click a card to copy it, double-click to edit it in iSnap, press and hold for Markup, drag it into any app or folder, or use its share button. Choose the **Classic**, **Cats**, **Rabbits**, or **Spider-Man** line in Settings (a bunny chases a carrot in Rabbits; three Spider-Men fire webs while a fourth drops in unexpectedly), pick **Show on Hover**, **Always Show**, or **Hide**, and toggle it any time with `⌃⌥T`.
 
 <p align="center"><img src="docs/assets/screenshots/capture-line-live.png" width="820" alt="A live recording of captures hanging on the Capture Line"></p>
 
@@ -64,7 +64,7 @@ One Share menu on Capture Line cards, in the editor, and in the Library: AirDrop
 
 Download the `.dmg` (or the `.zip`) from the [latest release](https://github.com/Vhaooforjob/isnap/releases/latest).
 
-See [what changed in 1.0.1 compared with 1.0](docs/releases/v1.0.1.md), including editable projects, privacy tools, Library search, scrolling capture and the independent Settings popup.
+See [what changed in 1.0.2 compared with 1.0.1](docs/releases/v1.0.2.md), including the Rabbits and Spider-Man Capture Line styles, animated characters and corrected card positioning.
 
 **Requirements:** macOS 14 Sonoma or later, Apple Silicon or Intel.
 

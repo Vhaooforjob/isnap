@@ -97,6 +97,62 @@ final class MarketingShotsTests: XCTestCase {
 
     // MARK: Demo data
 
+    func testRenderRabbitLine() async throws {
+        #if SWIFT_PACKAGE
+        throw XCTSkip("Render the rabbit line with xcodebuild test so SwiftUI can load the compiled asset catalog")
+        #else
+        for name in ["CaptureLineRabbitCream", "CaptureLineRabbitGray", "CaptureLineRabbitBrown", "RunningRabbit"] {
+            XCTAssertNotNil(NSImage(named: name), "Missing bundled sprite: \(name)")
+        }
+
+        let model = try makeModel()
+        model.captureLine.style = .rabbits
+        model.captureLine.isRevealed = true
+        for width: CGFloat in [900, 1600] {
+            try await shot(CaptureLineView(line: model.captureLine),
+                           "rabbit-line-\(Int(width))", size: CGSize(width: width, height: CaptureLineLayout.panelHeight),
+                           transparent: true, settle: 1.5)
+        }
+        try await shot(CaptureLineView(line: model.captureLine), "rabbit-line-moving",
+                       size: CGSize(width: 1600, height: CaptureLineLayout.panelHeight), transparent: true, settle: 1.5)
+        #endif
+    }
+
+    func testRenderSpiderManLine() async throws {
+        let model = try makeModel()
+        model.captureLine.style = .spiderMan
+        model.captureLine.isRevealed = true
+        for width: CGFloat in [900, 1600] {
+            try await shot(CaptureLineView(line: model.captureLine), "spider-man-line-\(Int(width))",
+                           size: CGSize(width: width, height: CaptureLineLayout.panelHeight), transparent: true, settle: 1.5)
+        }
+        try await shot(CaptureLineView(line: model.captureLine), "spider-man-surprise",
+                       size: CGSize(width: 900, height: CaptureLineLayout.panelHeight), transparent: true, settle: 6.5)
+    }
+
+    func testRenderSpiderSurpriseStates() async throws {
+        let poses = HStack(alignment: .bottom, spacing: 30) {
+            ForEach(0..<3, id: \.self) { index in
+                SpiderManMascot(isHanging: false, stance: index, aim: 1)
+                    .frame(width: 100, height: 140)
+            }
+        }.padding(20)
+        let poseRenderer = ImageRenderer(content: poses)
+        poseRenderer.scale = 2
+        let poseImage = try XCTUnwrap(poseRenderer.cgImage)
+        try write(NSImage(cgImage: poseImage, size: CGSize(width: 400, height: 180)), "spider-three-poses")
+
+        let event = SpiderDropEvent(start: 0, duration: 8, anchorFraction: 0.33,
+                                    depth: 24, bobAmplitude: 6, frequency: 3, phase: 0)
+        for (name, time) in [("idle", -1.0), ("enter", 0.8), ("swing", 2.5), ("exit", 7.4)] {
+            let size = CGSize(width: 900, height: CaptureLineLayout.panelHeight)
+            let renderer = ImageRenderer(content: SpiderSceneView(width: 900, time: time, event: event))
+            renderer.scale = 2
+            let image = try XCTUnwrap(renderer.cgImage)
+            try write(NSImage(cgImage: image, size: size), "spider-scene-\(name)")
+        }
+    }
+
     private func makeModel() throws -> AppModel {
         let library = sandbox.appendingPathComponent("Library", isDirectory: true)
         let line = sandbox.appendingPathComponent("Line", isDirectory: true)

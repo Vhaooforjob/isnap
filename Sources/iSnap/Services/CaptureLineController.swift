@@ -330,9 +330,9 @@ final class CaptureLineController: ObservableObject {
         guard let panel, let index = line.items.firstIndex(where: { $0.id == id }) else { return nil }
         let width = panel.frame.width
         let x = CaptureLineLayout.x(index: index, count: line.items.count, width: width)
-        let viewTop = CaptureLineLayout.ropeY(x: x, width: width) - CaptureLineLayout.pinAbove
-        let cardTop = viewTop + CaptureLineLayout.cardOffsetBelowTop
-        let size = CaptureLineLayout.cardSize(for: line.items[index].thumbnail.size)
+        let viewTop = CaptureLineLayout.ropeY(x: x, width: width, style: line.style) - CaptureLineLayout.pinAbove
+        let cardTop = viewTop + CaptureLineLayout.cardOffsetBelowTop(for: line.style)
+        let size = CaptureLineLayout.cardSize(for: line.items[index].thumbnail.size, style: line.style)
         return CGRect(
             x: panel.frame.minX + x - size.width / 2,
             y: panel.frame.maxY - cardTop - size.height,

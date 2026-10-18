@@ -3453,6 +3453,16 @@
         }
       }
     },
+    "Rabbits": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thỏ"
+          }
+        }
+      }
+    },
     "Ratio": {
       "localizations": {
         "vi": {
@@ -4244,6 +4254,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lấp lánh"
+          }
+        }
+      }
+    },
+    "Spider-Man": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Người Nhện"
           }
         }
       }
