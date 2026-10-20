@@ -49,9 +49,11 @@ final class EnhancementTests: XCTestCase {
         let actual = try pixels(small)
         let direct = try bitmap(ExportRenderer.render(request, maxPixelDimension: 100))
         XCTAssertEqual(actual, try pixels(direct))
-        let blackPixels = stride(from: 0, to: actual.count, by: 4).filter {
-            actual[$0] == 0 && actual[$0 + 1] == 0 && actual[$0 + 2] == 0 && actual[$0 + 3] == 255
-        }.count
+        var blackPixels = 0
+        for offset in stride(from: 0, to: actual.count, by: 4) {
+            let rgbIsBlack = actual[offset] == 0 && actual[offset + 1] == 0 && actual[offset + 2] == 0
+            if rgbIsBlack && actual[offset + 3] == 255 { blackPixels += 1 }
+        }
         XCTAssertEqual(blackPixels, 800)
         XCTAssertEqual(try bitmap(ExportRenderer.render(request)).width, 400)
         let changed = RenderRequest(image: source, annotations: [], canvas: canvas, includeBackground: true)

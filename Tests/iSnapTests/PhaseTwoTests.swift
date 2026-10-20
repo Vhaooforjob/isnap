@@ -90,6 +90,7 @@ final class PhaseTwoTests: XCTestCase {
         XCTAssertThrowsError(try ProjectStore.read(folder.appendingPathComponent("Previous.isnap")))
     }
     @MainActor func testPixelAlignmentAndSpaceMoveCaptureImmediatelyOnRelease() throws {
+        _ = NSApplication.shared
         XCTAssertEqual(RegionSelectionView.pixelAligned(CGRect(x: 1.24, y: 2.26, width: 10.5, height: 20.5), scale: 2),
             CGRect(x: 1, y: 2.5, width: 10.5, height: 20.5))
         let view = RegionSelectionView(frame: CGRect(x: 0, y: 0, width: 300, height: 200))

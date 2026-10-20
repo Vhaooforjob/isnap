@@ -69,7 +69,7 @@ One Share menu on Capture Line cards, in the editor, and in the Library: AirDrop
 
 Download the `.dmg` (or the `.zip`) from the [latest release](https://github.com/Vhaooforjob/isnap/releases/latest).
 
-See [what changed in 1.0.2 compared with 1.0.1](docs/releases/v1.0.2.md), including the Rabbits and Spider-Man Capture Line styles, animated characters and corrected card positioning.
+See [what changed in 1.0.3 compared with 1.0.2](docs/releases/v1.0.3.md), including layers and snapping, precise region capture, background export, interactive OCR, image composition and capture workflows.
 
 **Requirements:** macOS 14 Sonoma or later, Apple Silicon or Intel.
 
