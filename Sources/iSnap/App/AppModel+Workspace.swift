@@ -57,19 +57,32 @@ extension AppModel {
 
     func saveDraft() {
         guard connectsServices, !isRestoringProject, document.image != nil else { return }
-        do { try ProjectStore.write(document.project(), to: ProjectStore.latestURL) }
+        do { try draftWriter.save(document.projectSnapshot(), to: [ProjectStore.latestURL]) }
         catch { errorMessage = String(localized: "Draft could not be saved: \(error.localizedDescription)") }
+    }
+
+    func scheduleDraft() {
+        guard connectsServices, !isRestoringProject, document.image != nil else { return }
+        do {
+            let id = draftID
+            draftWriter.enqueue(try document.projectSnapshot(), to: ProjectStore.latestURL) { [weak self] error in
+                guard let error else { return }
+                Task { @MainActor in
+                    guard let self, self.draftID == id else { return }
+                    self.errorMessage = String(localized: "Draft could not be saved: \(error.localizedDescription)")
+                }
+            }
+        } catch { errorMessage = error.localizedDescription }
     }
 
     /// A failed disk write must never silently discard the current document.
     func preserveCurrentDraft() -> Bool {
         guard connectsServices, document.image != nil else { return true }
         do {
-            let project = try document.project()
+            let snapshot = try document.projectSnapshot()
             let name = String(document.sourceName.prefix(60)).replacingOccurrences(of: "/", with: "-")
             let url = ProjectStore.directory.appendingPathComponent("\(name)-\(draftID).isnap")
-            try ProjectStore.write(project, to: url)
-            try ProjectStore.write(project, to: ProjectStore.latestURL)
+            try draftWriter.save(snapshot, to: [url, ProjectStore.latestURL])
             drafts = ProjectStore.drafts
             return true
         } catch { errorMessage = error.localizedDescription; return false }
@@ -77,11 +90,12 @@ extension AppModel {
 
     func restoreLatestDraft() {
         drafts = ProjectStore.drafts
-        guard FileManager.default.fileExists(atPath: ProjectStore.latestURL.path) else { return }
+        guard FileManager.default.fileExists(atPath: ProjectStore.latestURL.path) ||
+            FileManager.default.fileExists(atPath: ProjectStore.previousURL.path) else { return }
         isRestoringProject = true
         defer { isRestoringProject = false }
         do {
-            try document.loadProject(ProjectStore.read(ProjectStore.latestURL))
+            try document.loadProject(ProjectStore.recover())
             statusText = String(localized: "Restored last editing session")
         } catch { errorMessage = String(localized: "Draft could not be restored: \(error.localizedDescription)") }
     }
@@ -156,6 +170,9 @@ extension AppModel {
             guard let self else { return }
             isIndexing = true
             var failures = 0
+            do { try await searchIndex.prune(in: settings.value.quickSave.folder, keeping: urls) }
+            catch { errorMessage = error.localizedDescription }
+            guard !Task.isCancelled else { return }
             for (offset, item) in items.enumerated() {
                 guard !Task.isCancelled else { return }
                 do {
@@ -196,11 +213,7 @@ extension AppModel {
         let tags = Array(Set(input.stringValue.split(separator: ",").map {
             $0.trimmingCharacters(in: .whitespacesAndNewlines)
         }.filter { !$0.isEmpty })).sorted()
-        for item in items {
-            var metadata = features.metadata(for: item.url)
-            metadata.tags = tags
-            features.setMetadata(metadata, for: item.url)
-        }
+        features.setTags(tags, for: items.map(\.url))
     }
 
     func saveCanvasPreset(name: String) {
@@ -261,6 +274,8 @@ extension AppModel {
                 let result = try await captureService.capture(displayID: selection.displayID, region: selection.rect, excludingOwnWindows: true)
                 guard let image = result.image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { throw ExportError.invalidImage }
                 return image
+            }, scroll: {
+                try await ScrollEventService.scroll(selection)
             }, completion: { [weak self] image in
                 windows.forEach { $0.orderFront(nil) }
                 guard let self else { return }

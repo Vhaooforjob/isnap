@@ -343,6 +343,7 @@ private struct iSnapCommands: Commands {
         }
         CommandGroup(after: .undoRedo) {
             Button("Delete Annotation", action: model.document.deleteSelection).keyboardShortcut(.delete, modifiers: [])
+                .disabled(model.section != .editor || model.document.selectedAnnotationIDs.isEmpty)
             Divider()
             Button("Select Tool") { model.document.tool = .select }.keyboardShortcut("v", modifiers: [])
             Button("Rectangle Tool") { model.document.tool = .rectangle }.keyboardShortcut("r", modifiers: [])

@@ -59,7 +59,7 @@ actor GoogleDriveUploader {
 
     func disconnect() throws { try keychain.remove(.googleOAuthToken) }
 
-    func upload(_ data: Data, filename: String, folderID: String) async throws -> URL {
+    func upload(_ data: Data, filename: String, folderID: String, progress: UploadProgressDelegate? = nil) async throws -> URL {
         guard data.count <= 50 * 1024 * 1024 else { throw CloudUploadError.fileTooLarge }
         let token = try await validToken()
         let boundary = "iSnap-\(UUID().uuidString)"
@@ -82,7 +82,7 @@ actor GoogleDriveUploader {
         request.timeoutInterval = 60
         request.setValue("Bearer \(token.accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("multipart/related; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        let (responseData, response) = try await session.data(for: request)
+        let (responseData, response) = try await session.data(for: request, delegate: progress)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
               let json = try JSONSerialization.jsonObject(with: responseData) as? [String: Any],
               let fileID = json["id"] as? String else {

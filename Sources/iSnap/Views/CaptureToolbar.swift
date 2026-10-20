@@ -15,6 +15,13 @@ struct CaptureToolbar: View {
                 .help(mode.help)
             }
             Menu {
+                Menu("Workflows") {
+                    ForEach(model.features.state.workflows ?? []) { workflow in
+                        Button(workflow.name) { model.runWorkflow(workflow) }.disabled(model.isCapturing)
+                    }
+                    Divider()
+                    Button("Manage Workflows…") { model.isShowingWorkflows = true }
+                }
                 Button("Capture Last Region") { Task { await model.captureLastRegion() } }
                     .disabled(model.lastRegion == nil || model.isCapturing)
                 Button("Scrolling Capture…") { Task { await model.beginScrollingCapture() } }
@@ -43,7 +50,11 @@ struct CaptureToolbar: View {
             Menu {
                 Button("Save Project…", action: model.saveProject).disabled(model.document.image == nil)
                 Button("Open Project…", action: model.openProject)
+                Button("Upload History…") { model.isShowingUploadHistory = true }
+                Button("Combine Images / PDF…") { model.compositionPages = []; model.isShowingComposition = true }
                 Menu("Recent Drafts") {
+                    Button("Manage Drafts…") { model.isShowingDrafts = true }
+                    Divider()
                     ForEach(Array(model.drafts.prefix(20)), id: \.self) { url in
                         Button(url.deletingPathExtension().lastPathComponent) { model.openProject(at: url) }
                     }

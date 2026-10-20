@@ -149,6 +149,9 @@ final class InteractiveCanvasView: NSView {
     private var dragHandle: DragHandle?
     private var didCheckpointDrag = false
     private var panOffset = CGPoint.zero
+    private let previewCache = EditorPreviewCache()
+    private var originalGroup: CGRect = .null
+    private var snapGuides: [SnapGuide] = []
 
     override var isFlipped: Bool { true }
     override var acceptsFirstResponder: Bool { true }
@@ -170,16 +173,33 @@ final class InteractiveCanvasView: NSView {
             return
         }
         let annotations = temporaryAnnotation.map { document.annotations + [$0] } ?? document.annotations
-        guard let rendered = try? ExportRenderer.render(RenderRequest(
+        let pixelLimit = max(1, min(4096, Int(max(bounds.width, bounds.height) * (window?.backingScaleFactor ?? 2) * document.previewZoom)))
+        guard let rendered = try? previewCache.render(RenderRequest(
             image: image,
             annotations: annotations,
             canvas: document.canvas,
             includeBackground: true
-        )) else { return }
+        ), maxPixelDimension: pixelLimit) else { return }
         let rect = previewRect(for: rendered.size, zoom: document.previewZoom)
         rendered.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: [.interpolation: NSImageInterpolation.high])
         drawCrop(document.cropRect, document: document, previewRect: rect, renderedSize: rendered.size)
-        drawSelection(document.selectedAnnotation, document: document, previewRect: rect, renderedSize: rendered.size)
+        for annotation in document.annotations where document.selectedAnnotationIDs.contains(annotation.id) && !annotation.isHidden {
+            drawSelection(annotation, document: document, previewRect: rect, renderedSize: rendered.size)
+        }
+        for guide in snapGuides {
+            let source = document.imagePixelSize
+            let a = guide.vertical ? CGPoint(x: guide.position, y: 0) : CGPoint(x: 0, y: guide.position)
+            let b = guide.vertical ? CGPoint(x: guide.position, y: source.height) : CGPoint(x: source.width, y: guide.position)
+            if let start = viewPoint(from: a, document: document, previewRect: rect, renderedSize: rendered.size),
+               let end = viewPoint(from: b, document: document, previewRect: rect, renderedSize: rendered.size) {
+                NSColor.systemPink.setStroke()
+                let path = NSBezierPath(); path.move(to: start); path.line(to: end); path.lineWidth = 1; path.stroke()
+                let label = guide.label ?? String(localized: "\(Int(guide.position.rounded())) px")
+                label.draw(at: CGPoint(x: start.x + 4, y: start.y + 4),
+                    withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .medium),
+                                     .foregroundColor: NSColor.systemPink, .backgroundColor: NSColor.windowBackgroundColor])
+            }
+        }
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -192,11 +212,17 @@ final class InteractiveCanvasView: NSView {
 
         if document.tool == .select {
             let hit = document.annotations.reversed().first { annotation in
-                annotation.normalizedFrame.insetBy(dx: -8, dy: -8).contains(point)
+                !annotation.isHidden && !annotation.isLocked && annotation.normalizedFrame.insetBy(dx: -8, dy: -8).contains(point)
             }
-            document.selectedAnnotationID = hit?.id
+            if event.modifierFlags.contains(.shift) || event.modifierFlags.contains(.command) {
+                document.select(hit?.id, extending: true)
+            } else if hit == nil || !document.selectedAnnotationIDs.contains(hit!.id) {
+                document.select(hit?.id)
+            }
             originalAnnotation = hit
-            if let hit {
+            originalGroup = document.annotations.filter { document.selectedAnnotationIDs.contains($0.id) && !$0.isLocked && !$0.isHidden }
+                .reduce(CGRect.null) { $0.union($1.normalizedFrame) }
+            if let hit, document.selectedAnnotationIDs.count == 1 {
                 let tolerance = selectionTolerance(document: document)
                 if hit.type == .line || hit.type == .arrow {
                     if distance(hit.lineStartPoint, point) <= tolerance {
@@ -224,10 +250,21 @@ final class InteractiveCanvasView: NSView {
         guard let document, let start = dragStart,
               let point = sourcePoint(from: convert(event.locationInWindow, from: nil), document: document) else { return }
         if document.tool == .select, var annotation = originalAnnotation {
+            guard document.selectedAnnotationIDs.contains(annotation.id) else { return }
             if !didCheckpointDrag {
                 document.beginMutation()
                 didCheckpointDrag = true
             }
+            if document.selectedAnnotationIDs.count > 1 {
+                let group = document.annotations.filter { document.selectedAnnotationIDs.contains($0.id) && !$0.isLocked && !$0.isHidden }
+                    .reduce(CGRect.null) { $0.union($1.normalizedFrame) }
+                let proposed = originalGroup.offsetBy(dx: point.x - start.x, dy: point.y - start.y)
+                let snapped = snappedFrame(proposed, event: event, document: document)
+                document.moveSelection(dx: snapped.minX - group.minX, dy: snapped.minY - group.minY, checkpoint: false)
+                needsDisplay = true
+                return
+            }
+            guard document.selectedAnnotationIDs.contains(annotation.id) else { return }
             if dragHandle == .lineStart {
                 annotation.setLineEndpoints(start: point, end: originalAnnotation!.lineEndPoint)
             } else if dragHandle == .lineEnd {
@@ -256,6 +293,13 @@ final class InteractiveCanvasView: NSView {
                     x: originalAnnotation!.frame.origin.x + point.x - start.x,
                     y: originalAnnotation!.frame.origin.y + point.y - start.y
                 )
+            }
+            if dragHandle == nil || dragHandle == .boundsBottomRight {
+                annotation.frame = snappedFrame(annotation.frame, event: event, document: document, resizing: dragHandle != nil)
+                if annotation.type == .image, dragHandle != nil, let originalAnnotation {
+                    annotation.frame.size.height = annotation.frame.width * originalAnnotation.frame.height / max(1, originalAnnotation.frame.width)
+                    snapGuides.removeAll { !$0.vertical }
+                }
             }
             document.update(annotation)
         } else if document.tool == .crop {
@@ -296,7 +340,17 @@ final class InteractiveCanvasView: NSView {
         temporaryAnnotation = nil
         dragHandle = nil
         didCheckpointDrag = false
+        snapGuides = []
         needsDisplay = true
+    }
+
+    private func snappedFrame(_ frame: CGRect, event: NSEvent, document: EditorDocument, resizing: Bool = false) -> CGRect {
+        guard document.snappingEnabled, !event.modifierFlags.contains(.option), !frame.isNull else { snapGuides = []; return frame }
+        let peers = document.annotations.filter { !document.selectedAnnotationIDs.contains($0.id) && !$0.isHidden }.map(\.normalizedFrame)
+        let result = SnapEngine.snap(frame, peers: peers, bounds: CGRect(origin: .zero, size: document.imagePixelSize),
+            tolerance: selectionTolerance(document: document) * 0.6, resizing: resizing)
+        snapGuides = result.guides
+        return result.frame
     }
 
     override func magnify(with event: NSEvent) {
@@ -320,7 +374,19 @@ final class InteractiveCanvasView: NSView {
 
     override func keyDown(with event: NSEvent) {
         guard let document else { return }
-        if event.keyCode == 51 || event.keyCode == 117 {
+        let command = event.modifierFlags.contains(.command)
+        let step: CGFloat = event.modifierFlags.contains(.shift) ? 10 : 1
+        if command, event.charactersIgnoringModifiers?.lowercased() == "d" {
+            document.duplicateSelection()
+        } else if command, event.charactersIgnoringModifiers?.lowercased() == "a" {
+            document.selectAllAnnotations()
+        } else if command, event.keyCode == 30 || event.keyCode == 33 {
+            document.reorderSelection(toFront: event.keyCode == 30)
+        } else if !command, (123...126).contains(event.keyCode) {
+            let dx: CGFloat = event.keyCode == 123 ? -step : event.keyCode == 124 ? step : 0
+            let dy: CGFloat = event.keyCode == 126 ? -step : event.keyCode == 125 ? step : 0
+            document.moveSelection(dx: dx, dy: dy, checkpoint: !event.isARepeat)
+        } else if event.keyCode == 51 || event.keyCode == 117 {
             document.deleteSelection()
         } else if event.keyCode == 53 {
             document.selectedAnnotationID = nil
@@ -329,6 +395,13 @@ final class InteractiveCanvasView: NSView {
         } else {
             super.keyDown(with: event)
         }
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard window?.firstResponder === self, event.modifierFlags.contains(.command),
+              [UInt16(0), 2, 30, 33].contains(event.keyCode) else { return super.performKeyEquivalent(with: event) }
+        keyDown(with: event)
+        return true
     }
 
     private func constrainedRect(from start: CGPoint, to end: CGPoint, ratio: CGFloat?) -> CGRect {

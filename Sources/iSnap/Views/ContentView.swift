@@ -12,7 +12,11 @@ struct ContentView: View {
                 HSplitView {
                     EditorCanvasHost(document: model.document)
                         .frame(minWidth: 560, minHeight: 420)
-                    CanvasSettingsPanel(document: model.document, settings: model.settings)
+                    VStack(spacing: 0) {
+                        LayersPanel(document: model.document)
+                        Divider()
+                        CanvasSettingsPanel(document: model.document, settings: model.settings)
+                    }.frame(minWidth: 280, idealWidth: 300).background(Color(nsColor: .windowBackgroundColor))
                 }
             } else {
                 LibraryView()
@@ -25,10 +29,23 @@ struct ContentView: View {
             WindowPickerView().environmentObject(model)
         }
         .sheet(isPresented: $model.isShowingParsedData) {
-            ScreenshotParseView(text: $model.recognizedText, sourceName: model.recognizedSourceName)
+            ScreenshotParseView(text: $model.recognizedText, sourceName: model.recognizedSourceName,
+                image: model.recognizedImage, regions: model.recognizedRegions)
         }
         .sheet(isPresented: $model.isShowingBatchExport) {
             BatchExportView().environmentObject(model)
+        }
+        .sheet(isPresented: $model.isShowingDrafts) {
+            DraftsView().environmentObject(model)
+        }
+        .sheet(isPresented: $model.isShowingUploadHistory) {
+            UploadHistoryView().environmentObject(model)
+        }
+        .sheet(isPresented: $model.isShowingComposition) {
+            CompositionView(pages: model.compositionPages).environmentObject(model)
+        }
+        .sheet(isPresented: $model.isShowingWorkflows) {
+            WorkflowsView().environmentObject(model)
         }
         .sheet(isPresented: $model.isShowingRedactionReview) {
             RedactionReviewView().environmentObject(model)
@@ -62,7 +79,18 @@ struct ContentView: View {
     private var statusBar: some View {
         HStack {
             Circle().fill(model.isCapturing || model.isParsingScreenshot ? Color.orange : Color.green).frame(width: 7, height: 7)
-            Text(model.statusText)
+            Text(model.statusText).lineLimit(1).truncationMode(.tail).help(model.statusText)
+            if model.isWorkflowRunning { Button("Stop Workflow", action: model.cancelWorkflow) }
+            if model.isExporting {
+                ProgressView().controlSize(.mini)
+                Button("Cancel Export") { model.exportTask?.cancel() }
+            }
+            if model.isUploading {
+                ProgressView(value: model.uploadFraction).frame(width: 55)
+                Button("Cancel Upload", action: model.cancelUpload)
+            } else if model.retryData != nil {
+                Button("Retry Upload", action: model.retryUpload)
+            }
             Spacer()
             if model.document.image != nil {
                 Button("Copy", systemImage: "doc.on.doc", action: model.copy)
@@ -78,7 +106,7 @@ struct ContentView: View {
                 } label: {
                     Label(model.isUploading ? "Uploading…" : "Upload", systemImage: "icloud.and.arrow.up")
                 }
-                .disabled(model.isUploading || (!model.r2Connected && !model.googleDriveConnected))
+                .disabled(model.isUploading || !AppModel.CloudProvider.allCases.contains(where: model.isAvailable))
                 Button("Export…", systemImage: "square.and.arrow.down.on.square", action: model.saveAs)
             }
         }

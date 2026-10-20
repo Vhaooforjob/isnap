@@ -8,6 +8,7 @@ struct RenderRequest {
     let annotations: [Annotation]
     let canvas: CanvasConfiguration
     let includeBackground: Bool
+    var backgroundImage: CGImage? = nil
 }
 
 enum ExportError: LocalizedError {
@@ -23,7 +24,7 @@ enum ExportError: LocalizedError {
 }
 
 enum ExportRenderer {
-    static func render(_ request: RenderRequest) throws -> NSImage {
+    static func render(_ request: RenderRequest, maxPixelDimension: Int? = nil, baseImage: NSImage? = nil) throws -> NSImage {
         guard let source = request.image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
             throw ExportError.invalidImage
         }
@@ -42,20 +43,25 @@ enum ExportRenderer {
         }
         outputSize.width = ceil(outputSize.width)
         outputSize.height = ceil(outputSize.height)
+        let rasterScale = maxPixelDimension.map {
+            min(1, CGFloat(max(1, $0)) / max(outputSize.width, outputSize.height))
+        } ?? 1
 
         guard let context = CGContext(
             data: nil,
-            width: Int(outputSize.width),
-            height: Int(outputSize.height),
+            width: max(1, Int(ceil(outputSize.width * rasterScale))),
+            height: max(1, Int(ceil(outputSize.height * rasterScale))),
             bitsPerComponent: 8,
             bytesPerRow: 0,
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else { throw ExportError.invalidImage }
+        context.scaleBy(x: rasterScale, y: rasterScale)
 
-        if request.includeBackground && request.canvas.showBackground {
-            if let url = request.canvas.backgroundImageURL,
-               let background = NSImage(contentsOf: url)?.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+        if baseImage == nil, request.includeBackground && request.canvas.showBackground {
+            if let background = request.backgroundImage ?? request.canvas.backgroundImageURL.flatMap({
+                NSImage(contentsOf: $0)?.cgImage(forProposedRect: nil, context: nil, hints: nil)
+            }) {
                 let sourceRatio = CGFloat(background.width) / CGFloat(background.height)
                 let targetRatio = outputSize.width / outputSize.height
                 let drawRect: CGRect
@@ -98,32 +104,36 @@ enum ExportRenderer {
             height: imageSize.height
         )
 
-        context.saveGState()
-        if request.canvas.shadowSize > 0 {
-            context.setShadow(
-                offset: CGSize(width: 0, height: -request.canvas.shadowSize * 0.25),
-                blur: request.canvas.shadowSize,
-                color: NSColor.black.withAlphaComponent(0.35).cgColor
-            )
-        }
-        let clipPath = CGPath(roundedRect: imageRect, cornerWidth: request.canvas.cornerRadius, cornerHeight: request.canvas.cornerRadius, transform: nil)
-        context.addPath(clipPath)
-        context.clip()
-        context.draw(source, in: imageRect)
-        context.restoreGState()
-
-        if request.canvas.borderEnabled {
-            let alpha = request.canvas.borderOpacity.clamped(to: 0...1)
-            context.setStrokeColor(request.canvas.borderColor.nsColor.withAlphaComponent(alpha).cgColor)
-            context.setLineWidth(request.canvas.borderWeight)
-            let adjustment: CGFloat = switch request.canvas.borderPosition {
-            case .outside: -request.canvas.borderWeight / 2
-            case .center: 0
-            case .inside: request.canvas.borderWeight / 2
+        if let base = baseImage?.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+            context.draw(base, in: CGRect(origin: .zero, size: outputSize))
+        } else {
+            context.saveGState()
+            if request.canvas.shadowSize > 0 {
+                context.setShadow(
+                    offset: CGSize(width: 0, height: -request.canvas.shadowSize * 0.25),
+                    blur: request.canvas.shadowSize,
+                    color: NSColor.black.withAlphaComponent(0.35).cgColor
+                )
             }
-            let borderRect = imageRect.insetBy(dx: adjustment, dy: adjustment)
-            context.addPath(CGPath(roundedRect: borderRect, cornerWidth: request.canvas.cornerRadius, cornerHeight: request.canvas.cornerRadius, transform: nil))
-            context.strokePath()
+            let clipPath = CGPath(roundedRect: imageRect, cornerWidth: request.canvas.cornerRadius, cornerHeight: request.canvas.cornerRadius, transform: nil)
+            context.addPath(clipPath)
+            context.clip()
+            context.draw(source, in: imageRect)
+            context.restoreGState()
+
+            if request.canvas.borderEnabled {
+                let alpha = request.canvas.borderOpacity.clamped(to: 0...1)
+                context.setStrokeColor(request.canvas.borderColor.nsColor.withAlphaComponent(alpha).cgColor)
+                context.setLineWidth(request.canvas.borderWeight)
+                let adjustment: CGFloat = switch request.canvas.borderPosition {
+                case .outside: -request.canvas.borderWeight / 2
+                case .center: 0
+                case .inside: request.canvas.borderWeight / 2
+                }
+                let borderRect = imageRect.insetBy(dx: adjustment, dy: adjustment)
+                context.addPath(CGPath(roundedRect: borderRect, cornerWidth: request.canvas.cornerRadius, cornerHeight: request.canvas.cornerRadius, transform: nil))
+                context.strokePath()
+            }
         }
 
         AnnotationRenderer.draw(
@@ -140,6 +150,7 @@ enum ExportRenderer {
 
 private enum AnnotationRenderer {
     static func draw(_ annotations: [Annotation], in context: CGContext, sourceSize: CGSize, destination: CGRect) {
+        let annotations = annotations.filter { !$0.isHidden }
         let scaleX = destination.width / sourceSize.width
         let scaleY = destination.height / sourceSize.height
         func map(_ point: CGPoint) -> CGPoint {
@@ -246,32 +257,35 @@ private enum AnnotationRenderer {
     private static let filterContext = CIContext(options: [.cacheIntermediates: false, .useSoftwareRenderer: true])
 
     private static func drawPrivacyMask(_ annotation: Annotation, frame: CGRect, context: CGContext) {
+        // Core Image works in bitmap pixels; preview drawing uses logical output coordinates.
+        let transform = context.ctm
         let bounds = CGRect(x: 0, y: 0, width: context.width, height: context.height)
-        let clipped = frame.integral.intersection(bounds)
+        let clipped = frame.applying(transform).integral.intersection(bounds)
         guard !clipped.isEmpty else { return }
+        let logicalRect = clipped.applying(transform.inverted())
         if annotation.type == .redact {
             context.setFillColor(NSColor.black.cgColor)
-            context.fill(clipped)
+            context.fill(logicalRect)
             return
         }
         guard let snapshot = context.makeImage() else {
-            context.setFillColor(NSColor.black.cgColor); context.fill(clipped)
+            context.setFillColor(NSColor.black.cgColor); context.fill(logicalRect)
             return
         }
         let input = CIImage(cgImage: snapshot)
         let filtered: CIImage
         if annotation.type == .blur {
-            filtered = input.clampedToExtent().applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: 18.0])
+            filtered = input.clampedToExtent().applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: max(1, 18 * abs(transform.a))])
         } else {
-            filtered = input.applyingFilter("CIPixellate", parameters: [kCIInputScaleKey: 16.0])
+            filtered = input.applyingFilter("CIPixellate", parameters: [kCIInputScaleKey: max(1, 16 * abs(transform.a))])
         }
         guard let image = filterContext.createCGImage(filtered, from: clipped) else {
             // A failed filter must never export the unmasked source.
-            context.setFillColor(NSColor.black.cgColor); context.fill(clipped)
+            context.setFillColor(NSColor.black.cgColor); context.fill(logicalRect)
             return
         }
         context.interpolationQuality = .none
-        context.draw(image, in: clipped)
+        context.draw(image, in: logicalRect)
     }
 
     private static func paintPath(_ annotation: Annotation, _ context: CGContext) {

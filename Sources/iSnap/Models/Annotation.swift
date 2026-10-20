@@ -22,6 +22,13 @@ struct Annotation: Identifiable, Codable, Hashable {
     var number: Int?
     var imageData: Data?
     var imageOpacity: CGFloat?
+    var layerName: String?
+    var hidden: Bool?
+    var locked: Bool?
+
+    var isHidden: Bool { hidden ?? false }
+    var isLocked: Bool { locked ?? false }
+    var displayName: String { layerName?.isEmpty == false ? layerName! : (type == .text ? String(text.prefix(40)) : type.title) }
 
     var effectiveImageOpacity: CGFloat {
         (imageOpacity ?? 1).clamped(to: 0...1)

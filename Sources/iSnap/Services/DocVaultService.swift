@@ -175,7 +175,8 @@ actor DocVaultService {
     func upload(
         _ data: Data,
         filename: String,
-        config: AppSettings.DocVaultSettings
+        config: AppSettings.DocVaultSettings,
+        progress: UploadProgressDelegate? = nil
     ) async throws -> URL {
         guard !config.workspaceID.isEmpty else { throw DocVaultError.workspaceRequired }
         guard var web = URL(string: config.webURL), ["http", "https"].contains(web.scheme?.lowercased() ?? "") else {
@@ -206,7 +207,8 @@ actor DocVaultService {
             bodyURL,
             boundary: boundary,
             config: config,
-            idempotencyKey: UUID().uuidString
+            idempotencyKey: UUID().uuidString,
+            progress: progress
         )
         web.append(path: "preview")
         web.append(path: file.id)
@@ -218,6 +220,7 @@ actor DocVaultService {
         boundary: String,
         config: AppSettings.DocVaultSettings,
         idempotencyKey: String,
+        progress: UploadProgressDelegate? = nil,
         retrying: Bool = false
     ) async throws -> Value {
         let stored = try matchingSession(config)
@@ -228,7 +231,7 @@ actor DocVaultService {
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue(idempotencyKey, forHTTPHeaderField: "Idempotency-Key")
-        let (data, response) = try await session.upload(for: request, fromFile: bodyURL)
+        let (data, response) = try await session.upload(for: request, fromFile: bodyURL, delegate: progress)
         if (response as? HTTPURLResponse)?.statusCode == 401, !retrying {
             try await refresh(config: config)
             return try await uploadBody(
@@ -236,6 +239,7 @@ actor DocVaultService {
                 boundary: boundary,
                 config: config,
                 idempotencyKey: idempotencyKey,
+                progress: progress,
                 retrying: true
             )
         }

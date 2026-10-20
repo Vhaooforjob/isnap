@@ -12,8 +12,12 @@ final class EditorDocument: ObservableObject {
     @Published private(set) var image: NSImage?
     @Published private(set) var sourceName = "Untitled"
     @Published var annotations: [Annotation] = []
-    @Published var selectedAnnotationID: UUID?
+    @Published var selectedAnnotationID: UUID? {
+        didSet { selectedAnnotationIDs = selectedAnnotationID.map { [$0] } ?? [] }
+    }
+    @Published private(set) var selectedAnnotationIDs: Set<UUID> = []
     @Published var tool = EditorTool.select
+    @Published var snappingEnabled = true
     @Published var style = AnnotationStyle()
     @Published var canvas = CanvasConfiguration()
     @Published var cropAspectRatio = CropAspectRatio.free
@@ -32,6 +36,7 @@ final class EditorDocument: ObservableObject {
     private var undoStack: [Snapshot] = []
     private var redoStack: [Snapshot] = []
     private let historyLimit = 100
+    private var snapshotImages: [(NSImage, CGImage)] = []
 
     struct Snapshot: Equatable {
         let image: NSImage?
@@ -106,6 +111,7 @@ final class EditorDocument: ObservableObject {
 
     func update(_ annotation: Annotation, checkpoint shouldCheckpoint: Bool = false) {
         guard let index = annotations.firstIndex(where: { $0.id == annotation.id }) else { return }
+        guard !annotations[index].isLocked else { return }
         if shouldCheckpoint { checkpoint() }
         annotations[index] = annotation
         isDirty = true
@@ -122,19 +128,106 @@ final class EditorDocument: ObservableObject {
 
     func beginMutation() { checkpoint() }
 
-    func deleteSelection() {
-        guard let id = selectedAnnotationID else { return }
+    func select(_ id: UUID?, extending: Bool = false) {
+        guard extending, let id else { selectedAnnotationID = id; return }
+        var ids = selectedAnnotationIDs
+        if !ids.insert(id).inserted { ids.remove(id) }
+        selectedAnnotationID = ids.contains(id) ? id : annotations.last(where: { ids.contains($0.id) })?.id
+        selectedAnnotationIDs = ids
+    }
+
+    func selectAllAnnotations() {
+        selectedAnnotationID = annotations.last?.id
+        selectedAnnotationIDs = Set(annotations.map(\.id))
+    }
+
+    func moveSelection(dx: CGFloat, dy: CGFloat, checkpoint shouldCheckpoint: Bool = true) {
+        guard !selectedAnnotationIDs.isEmpty, dx != 0 || dy != 0 else { return }
+        if shouldCheckpoint { checkpoint() }
+        for index in annotations.indices where selectedAnnotationIDs.contains(annotations[index].id) && !annotations[index].isLocked && !annotations[index].isHidden {
+            annotations[index].frame.origin.x += dx
+            annotations[index].frame.origin.y += dy
+        }
+        isDirty = true
+    }
+
+    func duplicateSelection() {
+        let selected = annotations.filter { selectedAnnotationIDs.contains($0.id) }
+        guard !selected.isEmpty else { return }
         checkpoint()
-        annotations.removeAll { $0.id == id }
+        var number = annotations.compactMap(\.number).max() ?? 0
+        let copies = selected.map { item -> Annotation in
+            var copy = item
+            copy.id = UUID()
+            copy.frame.origin.x += 10; copy.frame.origin.y += 10
+            if copy.type == .number { number += 1; copy.number = number }
+            return copy
+        }
+        annotations.append(contentsOf: copies)
+        selectedAnnotationID = copies.last?.id
+        selectedAnnotationIDs = Set(copies.map(\.id))
+        isDirty = true
+    }
+
+    func reorderSelection(toFront: Bool) {
+        let selected = annotations.filter { selectedAnnotationIDs.contains($0.id) }
+        guard !selected.isEmpty else { return }
+        let others = annotations.filter { !selectedAnnotationIDs.contains($0.id) }
+        let reordered = toFront ? others + selected : selected + others
+        guard reordered != annotations else { return }
+        checkpoint()
+        annotations = reordered
+        isDirty = true
+    }
+
+    enum Alignment: String, CaseIterable, Identifiable {
+        case left, center, right, top, middle, bottom
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .left: String(localized: "Align Left")
+            case .center: String(localized: "Align Centers")
+            case .right: String(localized: "Align Right")
+            case .top: String(localized: "Align Top")
+            case .middle: String(localized: "Align Middles")
+            case .bottom: String(localized: "Align Bottom")
+            }
+        }
+    }
+
+    func alignSelection(_ alignment: Alignment) {
+        let selected = annotations.filter { selectedAnnotationIDs.contains($0.id) && !$0.isLocked && !$0.isHidden }
+        guard selected.count > 1 else { return }
+        let bounds = selected.reduce(CGRect.null) { $0.union($1.normalizedFrame) }
+        checkpoint()
+        for index in annotations.indices where selectedAnnotationIDs.contains(annotations[index].id) && !annotations[index].isLocked && !annotations[index].isHidden {
+            let frame = annotations[index].normalizedFrame
+            switch alignment {
+            case .left: annotations[index].frame.origin.x += bounds.minX - frame.minX
+            case .center: annotations[index].frame.origin.x += bounds.midX - frame.midX
+            case .right: annotations[index].frame.origin.x += bounds.maxX - frame.maxX
+            case .top: annotations[index].frame.origin.y += bounds.minY - frame.minY
+            case .middle: annotations[index].frame.origin.y += bounds.midY - frame.midY
+            case .bottom: annotations[index].frame.origin.y += bounds.maxY - frame.maxY
+            }
+        }
+        isDirty = true
+    }
+
+    func deleteSelection() {
+        let ids = Set(annotations.filter { selectedAnnotationIDs.contains($0.id) && !$0.isLocked }.map(\.id))
+        guard !ids.isEmpty else { return }
+        checkpoint()
+        annotations.removeAll { ids.contains($0.id) }
         selectedAnnotationID = nil
-        if annotationEditRequest?.id == id { annotationEditRequest = nil }
+        if let id = annotationEditRequest?.id, ids.contains(id) { annotationEditRequest = nil }
         isDirty = true
     }
 
     func clearAnnotations() {
         guard !annotations.isEmpty else { return }
         checkpoint()
-        annotations.removeAll()
+        annotations.removeAll { !$0.isLocked }
         selectedAnnotationID = nil
         isDirty = true
     }
@@ -203,6 +296,35 @@ final class EditorDocument: ObservableObject {
 
     func markSaved() { isDirty = false }
 
+    func updateLayer(_ id: UUID, name: String? = nil, hidden: Bool? = nil, locked: Bool? = nil) {
+        guard let index = annotations.firstIndex(where: { $0.id == id }) else { return }
+        checkpoint()
+        if let name { annotations[index].layerName = name }
+        if let hidden { annotations[index].hidden = hidden }
+        if let locked { annotations[index].locked = locked }
+        isDirty = true
+    }
+
+    func moveLayer(_ id: UUID, before target: UUID) {
+        guard id != target, let source = annotations.firstIndex(where: { $0.id == id }),
+              let destination = annotations.firstIndex(where: { $0.id == target }) else { return }
+        checkpoint()
+        let item = annotations.remove(at: source)
+        annotations.insert(item, at: destination)
+        isDirty = true
+    }
+
+    func setFrame(_ frame: CGRect, for id: UUID) {
+        guard var item = annotations.first(where: { $0.id == id }), !item.isLocked,
+              [frame.minX, frame.minY, frame.width, frame.height].allSatisfy(\.isFinite),
+              frame.width >= 1, frame.height >= 1, frame.width <= 100_000, frame.height <= 100_000 else { return }
+        let previous = item.normalizedFrame
+        item.points = item.points.map { CGPoint(x: $0.x * frame.width / max(1, previous.width),
+                                               y: $0.y * frame.height / max(1, previous.height)) }
+        item.frame = frame
+        update(item, checkpoint: true)
+    }
+
     func project() throws -> EditorProject {
         guard let image else { throw ExportError.invalidImage }
         return try EditorProject(sourceName: sourceName, image: ProjectStore.png(image),
@@ -210,6 +332,22 @@ final class EditorDocument: ObservableObject {
             originalAnnotations: originalAnnotations, canvas: canvas,
             backgroundImage: canvas.backgroundImageURL.map { try Data(contentsOf: $0) },
             cropRect: cropRect, lastAppliedCrop: lastAppliedCrop, isCropApplied: isCropApplied)
+    }
+
+    func projectSnapshot() throws -> ProjectSnapshot {
+        guard let image else { throw ExportError.invalidImage }
+        func bitmap(_ value: NSImage) throws -> CGImage {
+            if let cached = snapshotImages.first(where: { $0.0 === value }) { return cached.1 }
+            guard let cg = value.cgImage(forProposedRect: nil, context: nil, hints: nil) else { throw ExportError.invalidImage }
+            snapshotImages.append((value, cg))
+            if snapshotImages.count > 2 { snapshotImages.removeFirst() }
+            return cg
+        }
+        return try ProjectSnapshot(image: bitmap(image),
+            originalImage: originalImage === image ? nil : originalImage.map(bitmap),
+            project: EditorProject(sourceName: sourceName, image: Data(), annotations: annotations,
+                originalAnnotations: originalAnnotations, canvas: canvas, cropRect: cropRect,
+                lastAppliedCrop: lastAppliedCrop, isCropApplied: isCropApplied))
     }
 
     func loadProject(_ project: EditorProject) throws {
@@ -237,7 +375,7 @@ final class EditorDocument: ObservableObject {
     }
 
     func presentEditor(for annotation: Annotation, checkpointOnCommit: Bool = true) {
-        guard annotation.type == .text || annotation.type == .number else { return }
+        guard !annotation.isLocked, annotation.type == .text || annotation.type == .number else { return }
         selectedAnnotationID = annotation.id
         annotationEditRequest = AnnotationEditRequest(
             id: annotation.id,

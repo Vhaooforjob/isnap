@@ -24,10 +24,27 @@ final class AppModel: ObservableObject {
     @Published var libraryItems: [LibraryItem] = []
     @Published var releaseInfo: ReleaseInfo?
     @Published var isUploading = false
+    @Published var uploadFraction = 0.0
+    @Published var isExporting = false
+    @Published var isShowingUploadHistory = false
+    @Published var isShowingComposition = false
+    @Published var compositionPages: [CompositionPage] = []
+    @Published var isShowingWorkflows = false
+    @Published var isWorkflowRunning = false
+    @Published var workflowShortcutErrors: [String] = []
+    var workflowTask: Task<Void, Never>?
+    let workflowHotkeys = GlobalHotkeyService(signature: 0x69535746)
+    @Published var uploadHistory: [UploadHistoryEntry] = []
+    @Published var retryData: (data: Data, ext: String, provider: CloudProvider)?
+    var uploadTask: Task<Void, Never>?
+    var exportTask: Task<Void, Never>?
+    let backgroundExporter = BackgroundExportService()
     @Published var isParsingScreenshot = false
     @Published var isShowingParsedData = false
     @Published var recognizedText = ""
     @Published var recognizedSourceName = String(localized: "Screenshot")
+    @Published var recognizedRegions: [RecognizedRegion] = []
+    @Published var recognizedImage: NSImage?
     @Published var sensitiveRegions: [RecognizedRegion] = []
     @Published var isShowingRedactionReview = false
     var redactionSource: NSImage?
@@ -53,6 +70,8 @@ final class AppModel: ObservableObject {
     @Published var isShowingBatchExport = false
     @Published var batchItems: [LibraryItem] = []
     @Published var drafts: [URL] = []
+    @Published var isShowingDrafts = false
+    let draftWriter = DraftWriter()
     @Published var lastRegion: ScreenSelection?
     var indexTask: Task<Void, Never>?
     var batchTask: Task<Void, Never>?
@@ -79,6 +98,7 @@ final class AppModel: ObservableObject {
     private let hotkeys = GlobalHotkeyService()
     private var cancellables: Set<AnyCancellable> = []
     private var widgetPublishTask: Task<Void, Never>?
+    private var libraryReloadID = UUID()
     /// False for a model built around demo data (documentation renders):
     /// no hotkeys, no Keychain or network checks, no widget publishing.
     let connectsServices: Bool
@@ -109,10 +129,23 @@ final class AppModel: ObservableObject {
         self.features.$errorMessage.compactMap { $0 }.sink { [weak self] in self?.errorMessage = $0 }.store(in: &cancellables)
         document.objectWillChange.sink { [weak self] in self?.objectWillChange.send() }.store(in: &cancellables)
         guard connectsServices else { return }
+        self.features.$state.map { $0.workflows ?? [] }.removeDuplicates().sink { [weak self] workflows in
+            guard let self else { return }
+            workflowShortcutErrors = workflowHotkeys.registerActions(workflows.map { workflow in
+                (workflow.shortcut, { [weak self] in self?.runWorkflow(workflow) })
+            })
+        }.store(in: &cancellables)
+        uploadHistory = UploadHistoryStore.read()
         restoreLatestDraft()
+        Task {
+            do {
+                try await DraftCatalog.shared.prune(days: UserDefaults.standard.integer(forKey: "draftRetentionDays"))
+                drafts = try await DraftCatalog.shared.items().map(\.url)
+            } catch { errorMessage = error.localizedDescription }
+        }
         document.$revision.dropFirst()
             .debounce(for: .milliseconds(700), scheduler: RunLoop.main)
-            .sink { [weak self] _ in self?.saveDraft() }
+            .sink { [weak self] _ in self?.scheduleDraft() }
             .store(in: &cancellables)
         Task { await refreshStorage() }
         hotkeys.register(settings.value.hotkeys)
@@ -236,8 +269,7 @@ final class AppModel: ObservableObject {
     }
 
     func parseScreenshot() async {
-        guard !isParsingScreenshot, let image = document.image,
-              let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+        guard !isParsingScreenshot, let image = document.image else {
             if document.image == nil { errorMessage = String(localized: "Capture or open an image before extracting text.") }
             return
         }
@@ -246,8 +278,13 @@ final class AppModel: ObservableObject {
         defer { isParsingScreenshot = false }
 
         do {
-            let result = try await screenshotParser.parse(cgImage)
+            let revision = document.revision
+            let output = try await backgroundExporter.render(try renderSnapshot(includeBackground: false), format: .png, quality: 1)
+            let result = try await screenshotParser.parse(output.image)
             guard document.image === image else { return }
+            guard document.revision == revision else { return }
+            recognizedRegions = result.regions
+            recognizedImage = NSImage(cgImage: output.image, size: CGSize(width: output.image.width, height: output.image.height))
             recognizedText = result.text
             recognizedSourceName = document.sourceName
             isShowingParsedData = true
@@ -330,36 +367,29 @@ final class AppModel: ObservableObject {
         } catch { report(error) }
     }
 
-    func quickSave() {
-        do {
-            settings.value.canvas = document.canvas
-            let url = try exportService.quickSave(document: document, settings: settings.value)
-            statusText = String(localized: "Saved \(url.lastPathComponent)")
-            Task { await reloadLibrary() }
-        } catch { report(error) }
-    }
+    func quickSave() { performExport(.quickSave) }
 
     func saveAs() {
-        do {
-            settings.value.canvas = document.canvas
-            if let url = try exportService.saveAs(document: document, settings: settings.value) {
-                statusText = String(localized: "Exported \(url.lastPathComponent)")
-            }
-        } catch { report(error) }
+        guard !isExporting else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = settings.value.export.defaultFormat == .png ? [.png] : [.jpeg]
+        panel.nameFieldStringValue = "iSnap.\(settings.value.export.defaultFormat.fileExtension)"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        performExport(.saveAs(url))
     }
 
-    func copy() {
-        do {
-            try exportService.copy(document: document, includeBackground: settings.value.export.includeBackground)
-            statusText = String(localized: "Copied to clipboard")
-        } catch { report(error) }
-    }
+    func copy() { performExport(.copy) }
 
     func reloadLibrary() async {
+        let reloadID = UUID()
+        libraryReloadID = reloadID
+        let folder = settings.value.quickSave.folder
         do {
-            try FileManager.default.createDirectory(at: settings.value.quickSave.folder, withIntermediateDirectories: true)
-            let items = try await libraryService.items(in: settings.value.quickSave.folder)
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let items = try await libraryService.items(in: folder)
+            guard libraryReloadID == reloadID, settings.value.quickSave.folder == folder else { return }
             libraryItems = items
+            features.pruneMetadata(in: folder, keeping: Set(items.map(\.url)))
             if connectsServices { startIndexing(items) }
             guard connectsServices else { return }
             widgetPublishTask?.cancel()
@@ -381,10 +411,8 @@ final class AppModel: ObservableObject {
 
     func deleteAllLibraryItems() async {
         do {
-            let count = try await libraryService.deleteAll(in: settings.value.quickSave.folder)
-            captureLine.prune()
-            await reloadLibrary()
-            statusText = count == 1 ? String(localized: "Moved 1 screenshot to Trash") : String(localized: "Moved \(count) screenshots to Trash")
+            let items = try await libraryService.items(in: settings.value.quickSave.folder)
+            await deleteLibraryItems(items)
         } catch {
             await reloadLibrary()
             report(error)
@@ -392,17 +420,25 @@ final class AppModel: ObservableObject {
     }
 
     func deleteLibraryItems(_ items: [LibraryItem]) async {
+        indexTask?.cancel()
+        isIndexing = false
+        let folder = settings.value.quickSave.folder
         var failures: [String] = []
+        var deleted: [URL] = []
         for item in items {
             do {
-                try await libraryService.delete(item, rootFolder: settings.value.quickSave.folder)
+                try await libraryService.delete(item, rootFolder: folder)
+                deleted.append(item.url)
                 await searchIndex.remove([item.url])
                 indexedText.removeValue(forKey: item.url)
-                features.state.metadata.removeValue(forKey: item.url.standardizedFileURL.path)
             } catch { failures.append("\(item.name): \(error.localizedDescription)") }
         }
+        features.removeMetadata(for: deleted)
+        do { try await searchIndex.save() }
+        catch { failures.append(error.localizedDescription) }
         captureLine.prune()
         await reloadLibrary()
+        statusText = String(localized: "Moved \(deleted.count) screenshots to Trash")
         if !failures.isEmpty { errorMessage = failures.joined(separator: "\n") }
     }
 
@@ -578,53 +614,79 @@ final class AppModel: ObservableObject {
         } catch { report(error) }
     }
 
-    enum CloudProvider: CaseIterable { case r2, googleDrive, docVault }
+    enum CloudProvider: String, CaseIterable, Codable { case r2, googleDrive, docVault }
 
     /// Uploads the edited image.
     func upload(to provider: CloudProvider) async {
         guard !isUploading else { return }
-        isUploading = true
-        statusText = String(localized: "Rendering upload…")
         do {
-            let format = settings.value.export.defaultFormat
-            let image = try exportService.render(document: document, includeBackground: settings.value.export.includeBackground)
-            let data = try exportService.encode(image, format: format, quality: settings.value.export.jpegQuality)
-            try await upload(data, fileExtension: format.fileExtension, to: provider)
+            let snapshot = try renderSnapshot(), preferences = settings.value
+            retryData = nil
+            isUploading = true; uploadFraction = 0
+            statusText = String(localized: "Rendering upload…")
+            uploadTask = Task {
+                defer { isUploading = false }
+                do {
+                    let result = try await backgroundExporter.render(snapshot, format: preferences.export.defaultFormat, quality: preferences.export.jpegQuality)
+                    try Task.checkCancellation()
+                    retryData = (result.data, preferences.export.defaultFormat.fileExtension, provider)
+                    try await uploadPayload(result.data, fileExtension: preferences.export.defaultFormat.fileExtension, to: provider)
+                    retryData = nil
+                } catch is CancellationError { statusText = String(localized: "Upload cancelled") }
+                catch let error as URLError where error.code == .cancelled { statusText = String(localized: "Upload cancelled") }
+                catch { report(error) }
+            }
+            await uploadTask?.value
         } catch { report(error) }
-        isUploading = false
     }
 
-    /// Uploads a file as it is, for example a Capture Line card or a Library item.
     func uploadFile(at url: URL, to provider: CloudProvider) async {
         guard !isUploading else { return }
-        isUploading = true
-        do {
-            let data = try Data(contentsOf: url)
-            let fileExtension = url.pathExtension.isEmpty ? "png" : url.pathExtension.lowercased()
-            try await upload(data, fileExtension: fileExtension, to: provider)
-        } catch { report(error) }
-        isUploading = false
+        isUploading = true; uploadFraction = 0; retryData = nil
+        uploadTask = Task {
+            defer { isUploading = false }
+            do {
+                let data = try await Task.detached { try Data(contentsOf: url) }.value
+                try Task.checkCancellation()
+                let ext = url.pathExtension.isEmpty ? "png" : url.pathExtension.lowercased()
+                retryData = (data, ext, provider)
+                try await uploadPayload(data, fileExtension: ext, to: provider)
+                retryData = nil
+            } catch is CancellationError { statusText = String(localized: "Upload cancelled") }
+            catch let error as URLError where error.code == .cancelled { statusText = String(localized: "Upload cancelled") }
+            catch { report(error) }
+        }
+        await uploadTask?.value
     }
 
-    private func upload(_ data: Data, fileExtension: String, to provider: CloudProvider) async throws {
-        let filename = "iSnap-\(Self.uploadTimestamp.string(from: Date())).\(fileExtension)"
+    func uploadPayload(_ data: Data, fileExtension: String, to provider: CloudProvider) async throws {
+        let filename = "iSnap-\(UUID().uuidString).\(fileExtension)"
         statusText = String(localized: "Uploading…")
+        let progress = UploadProgressDelegate { [weak self] value in
+            Task { @MainActor in self?.uploadFraction = value }
+        }
         let url: URL
         switch provider {
         case .r2:
-            url = try await r2Uploader.upload(data, filename: filename, config: settings.value.cloud.r2)
+            url = try await r2Uploader.upload(data, filename: filename, config: settings.value.cloud.r2, progress: progress)
         case .googleDrive:
-            url = try await googleDriveUploader.upload(data, filename: filename, folderID: settings.value.cloud.googleDrive.folderID)
+            url = try await googleDriveUploader.upload(data, filename: filename, folderID: settings.value.cloud.googleDrive.folderID, progress: progress)
         case .docVault:
-            url = try await docVaultService.upload(data, filename: filename, config: settings.value.cloud.docVault)
+            url = try await docVaultService.upload(data, filename: filename, config: settings.value.cloud.docVault, progress: progress)
             await refreshDocVault(showError: false)
         }
+        try Task.checkCancellation()
+        uploadHistory.insert(UploadHistoryEntry(provider: title(of: provider), url: url), at: 0)
+        uploadHistory = Array(uploadHistory.prefix(100))
+        let history = uploadHistory
+        do { try await Task.detached { try UploadHistoryStore.save(history) }.value }
+        catch { errorMessage = error.localizedDescription }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(url.absoluteString, forType: .string)
         statusText = String(localized: "Uploaded; link copied")
     }
 
-    private func isAvailable(_ provider: CloudProvider) -> Bool {
+    func isAvailable(_ provider: CloudProvider) -> Bool {
         switch provider {
         case .r2: r2Connected
         case .googleDrive: googleDriveConnected
@@ -657,14 +719,7 @@ final class AppModel: ObservableObject {
     }
 
     /// Renders the edited image to a file and offers the Share menu for it.
-    func shareEditedImage() {
-        do {
-            let format = settings.value.export.defaultFormat
-            let image = try exportService.render(document: document, includeBackground: settings.value.export.includeBackground)
-            let data = try exportService.encode(image, format: format, quality: settings.value.export.jpegQuality)
-            showShareMenu(for: try ShareService.prepareFile(data, fileExtension: format.fileExtension))
-        } catch { report(error) }
-    }
+    func shareEditedImage() { performExport(.share) }
 
     // MARK: Storage
 
@@ -738,16 +793,19 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func loadIntoEditor(_ result: CaptureResult) {
-        guard preserveCurrentDraft() else { return }
+    @discardableResult
+    func loadIntoEditor(_ result: CaptureResult) -> Bool {
+        guard preserveCurrentDraft() else { return false }
         draftID = UUID()
         document.load(result)
         recognizedText = ""
+        recognizedRegions = []; recognizedImage = nil
         isShowingParsedData = false
         document.canvas = settings.value.canvas
         section = .editor
         statusText = String(localized: "\(Int(document.imagePixelSize.width)) × \(Int(document.imagePixelSize.height)) px")
         presentMainWindow?()
+        return true
     }
 
     /// A region selection is display-local with a top-left origin; the

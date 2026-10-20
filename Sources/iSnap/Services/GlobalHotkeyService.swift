@@ -5,12 +5,15 @@ import Foundation
 final class GlobalHotkeyService {
     var onHotkey: ((CaptureMode) -> Void)?
     var onToggleCaptureLine: (() -> Void)?
+    var onScrollCapture: (() -> Void)?
 
     private var references: [EventHotKeyRef?] = []
     private var handler: EventHandlerRef?
-    private let signature: OSType = 0x69534E50 // iSNP
+    private let signature: OSType
+    private var actions: [UInt32: () -> Void] = [:]
 
-    init() {
+    init(signature: OSType = 0x69534E50) {
+        self.signature = signature
         var event = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
         InstallEventHandler(
             GetApplicationEventTarget(),
@@ -28,6 +31,7 @@ final class GlobalHotkeyService {
                 )
                 guard status == noErr else { return status }
                 let service = Unmanaged<GlobalHotkeyService>.fromOpaque(userData).takeUnretainedValue()
+                guard identifier.signature == service.signature else { return OSStatus(eventNotHandledErr) }
                 Task { @MainActor in service.handle(identifier.id) }
                 return noErr
             },
@@ -62,14 +66,42 @@ final class GlobalHotkeyService {
         references.append(reference)
     }
 
+    func registerScrollingCapture(_ action: @escaping () -> Void) -> Bool {
+        unregisterScrollingCapture()
+        onScrollCapture = action
+        register("⌃⌥N", id: 5)
+        return !references.isEmpty
+    }
+
+    func unregisterScrollingCapture() {
+        references.forEach { if let ref = $0 { UnregisterEventHotKey(ref) } }
+        references.removeAll()
+        onScrollCapture = nil
+    }
+
     private func handle(_ identifier: UInt32) {
+        if let action = actions[identifier] { action(); return }
         switch identifier {
         case 1: onHotkey?(.fullScreen)
         case 2: onHotkey?(.region)
         case 3: onHotkey?(.window)
         case 4: onToggleCaptureLine?()
+        case 5: onScrollCapture?()
         default: break
         }
+    }
+
+    func registerActions(_ shortcuts: [(String, () -> Void)]) -> [String] {
+        unregisterScrollingCapture()
+        actions.removeAll()
+        var unavailable: [String] = []
+        for (index, shortcut) in shortcuts.enumerated() {
+            let id = UInt32(index + 100), count = references.count
+            register(shortcut.0, id: id)
+            if references.count == count { unavailable.append(shortcut.0) }
+            else { actions[id] = shortcut.1 }
+        }
+        return unavailable
     }
 
     static func parse(_ value: String) -> (keyCode: UInt32, modifiers: UInt32)? {

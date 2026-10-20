@@ -24,7 +24,9 @@ struct LibraryThumbnail: View {
         }
         .task(id: loadID) {
             image = nil
-            image = await ThumbnailCache.shared.image(for: item, maxPixelSize: maxPixelSize)
+            let result = await ThumbnailCache.shared.image(for: item, maxPixelSize: maxPixelSize)
+            guard !Task.isCancelled else { return }
+            image = result
         }
         .onDisappear { image = nil }
     }

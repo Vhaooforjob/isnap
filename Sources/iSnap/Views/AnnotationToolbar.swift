@@ -107,6 +107,18 @@ struct AnnotationToolbar: View {
 
     @ViewBuilder
     private var historyControls: some View {
+        Menu {
+            Button("Duplicate", action: document.duplicateSelection)
+            Button("Bring to Front") { document.reorderSelection(toFront: true) }
+            Button("Send to Back") { document.reorderSelection(toFront: false) }
+            Divider()
+            ForEach(EditorDocument.Alignment.allCases) { alignment in
+                Button(alignment.title) { document.alignSelection(alignment) }
+                    .disabled(document.selectedAnnotationIDs.count < 2)
+            }
+        } label: { Image(systemName: "square.3.layers.3d") }
+        .disabled(document.selectedAnnotationIDs.isEmpty)
+        .help("Arrange selection. Shift-click to select multiple annotations.")
         Button(action: document.undo) { Image(systemName: "arrow.uturn.backward") }
             .disabled(!document.canUndo)
             .help("Undo")

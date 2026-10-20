@@ -1,13 +1,28 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "": {},
+    "": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ""
+          }
+        }
+      }
+    },
     "%@ (%@)": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "new",
             "value": "%1$@ (%2$@)"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (%@)"
           }
         }
       }
@@ -59,10 +74,25 @@
             "state": "new",
             "value": "%1$@ • %2$lld × %3$lld"
           }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ • %lld × %lld"
+          }
         }
       }
     },
-    "%lld": {},
+    "%lld": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        }
+      }
+    },
     "%lld frames": {
       "localizations": {
         "vi": {
@@ -103,7 +133,16 @@
         }
       }
     },
-    "%lld px": {},
+    "%lld px": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld px"
+          }
+        }
+      }
+    },
     "%lld selected": {
       "localizations": {
         "vi": {
@@ -121,6 +160,12 @@
             "state": "new",
             "value": "%1$lld × %2$lld"
           }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld × %lld"
+          }
         }
       }
     },
@@ -131,16 +176,37 @@
             "state": "new",
             "value": "%1$lld × %2$lld px"
           }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld × %lld px"
+          }
         }
       }
     },
-    "%lld%%": {},
+    "%lld%%": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%%"
+          }
+        }
+      }
+    },
     "%lld%@": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "new",
             "value": "%1$lld%2$@"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%@"
           }
         }
       }
@@ -151,6 +217,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "10 giây"
+          }
+        }
+      }
+    },
+    "1600 px": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1600 px"
+          }
+        }
+      }
+    },
+    "2400 px": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2400 px"
           }
         }
       }
@@ -171,6 +257,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "5 giây"
+          }
+        }
+      }
+    },
+    "800 px": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "800 px"
           }
         }
       }
@@ -215,12 +311,32 @@
         }
       }
     },
+    "Add": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thêm"
+          }
+        }
+      }
+    },
     "Add Frame": {
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Thêm khung ảnh"
+          }
+        }
+      }
+    },
+    "Add Images…": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thêm ảnh…"
           }
         }
       }
@@ -255,12 +371,112 @@
         }
       }
     },
+    "Add a workflow to capture, style, save and copy with one shortcut.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thêm quy trình để chụp, áp dụng kiểu, lưu và sao chép bằng một phím tắt."
+          }
+        }
+      }
+    },
     "Added %@ sticker": {
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Đã thêm sticker %@"
+          }
+        }
+      }
+    },
+    "After 30 days": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sau 30 ngày"
+          }
+        }
+      }
+    },
+    "After 7 days": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sau 7 ngày"
+          }
+        }
+      }
+    },
+    "After 90 days": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sau 90 ngày"
+          }
+        }
+      }
+    },
+    "Align Bottom": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Căn dưới"
+          }
+        }
+      }
+    },
+    "Align Centers": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Căn giữa theo chiều ngang"
+          }
+        }
+      }
+    },
+    "Align Left": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Căn trái"
+          }
+        }
+      }
+    },
+    "Align Middles": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Căn giữa theo chiều dọc"
+          }
+        }
+      }
+    },
+    "Align Right": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Căn phải"
+          }
+        }
+      }
+    },
+    "Align Top": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Căn trên"
           }
         }
       }
@@ -281,6 +497,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mọi thời điểm"
+          }
+        }
+      }
+    },
+    "Allow iSnap in System Settings → Privacy & Security → Accessibility to scroll automatically, or turn off automatic scrolling and scroll manually.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cho phép iSnap trong Cài đặt hệ thống → Quyền riêng tư & Bảo mật → Trợ năng để tự động cuộn, hoặc tắt tùy chọn này và cuộn thủ công."
           }
         }
       }
@@ -322,6 +548,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Thạch anh tím"
+          }
+        }
+      }
+    },
+    "An enabled upload sends each workflow capture to the selected connected provider and copies its link.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Khi bật tải lên, mỗi ảnh chụp của quy trình sẽ được gửi đến dịch vụ đã chọn và sao chép liên kết."
           }
         }
       }
@@ -373,6 +609,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nước biển"
+          }
+        }
+      }
+    },
+    "Arrange selection. Shift-click to select multiple annotations.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sắp xếp vùng chọn. Giữ Shift và nhấp để chọn nhiều chú thích."
           }
         }
       }
@@ -518,6 +764,16 @@
         }
       }
     },
+    "Bring to Front": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đưa lên trước"
+          }
+        }
+      }
+    },
     "Bucket": {
       "localizations": {
         "vi": {
@@ -579,6 +835,36 @@
         }
       }
     },
+    "Cancel Export": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hủy xuất"
+          }
+        }
+      }
+    },
+    "Cancel Upload": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hủy tải lên"
+          }
+        }
+      }
+    },
+    "Cancelled": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã hủy"
+          }
+        }
+      }
+    },
     "Candy": {
       "extractionState": "manual",
       "localizations": {
@@ -606,6 +892,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Không lấy được dung lượng"
+          }
+        }
+      }
+    },
+    "Caption": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chú thích"
           }
         }
       }
@@ -700,6 +996,16 @@
         }
       }
     },
+    "Capture Workflows": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quy trình chụp"
+          }
+        }
+      }
+    },
     "Capture a region": {
       "localizations": {
         "vi": {
@@ -770,6 +1076,16 @@
         }
       }
     },
+    "Capture from any app with ⌃⌥N.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chụp từ ứng dụng bất kỳ bằng ⌃⌥N."
+          }
+        }
+      }
+    },
     "Capture options": {
       "localizations": {
         "vi": {
@@ -806,6 +1122,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hãy chụp hoặc mở một ảnh trước khi chèn ảnh phủ."
+          }
+        }
+      }
+    },
+    "Capture region": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chụp vùng"
           }
         }
       }
@@ -972,6 +1298,16 @@
         }
       }
     },
+    "Changes take effect after Save Workflow. Removing a workflow also requires saving.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thay đổi có hiệu lực sau khi Lưu quy trình. Xóa quy trình cũng cần lưu lại."
+          }
+        }
+      }
+    },
     "Check Now": {
       "localizations": {
         "vi": {
@@ -1104,12 +1440,32 @@
         }
       }
     },
+    "Clear History": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xóa lịch sử"
+          }
+        }
+      }
+    },
     "Cleared %@ of cache": {
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Đã xoá %@ bộ nhớ đệm"
+          }
+        }
+      }
+    },
+    "Clearing history removes local links only. Uploaded files remain with the provider.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xóa lịch sử chỉ xóa liên kết trên máy. Tệp đã tải lên vẫn được giữ trên dịch vụ."
           }
         }
       }
@@ -1130,6 +1486,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bấm để sao chép • Bấm đúp để sửa trong iSnap • Nhấn giữ để mở Đánh dấu • Kéo vào ứng dụng để gửi bản sao • Kéo vào Thùng rác hoặc bấm dấu × để gỡ xuống • Bấm chuột phải để xem thêm."
+          }
+        }
+      }
+    },
+    "Click text regions to select them. CSV columns are inferred from their positions; review the result.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bấm vào vùng chữ để chọn. Cột CSV được suy ra từ vị trí chữ; hãy kiểm tra kết quả."
           }
         }
       }
@@ -1224,6 +1590,56 @@
         }
       }
     },
+    "Combine / PDF…": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ghép ảnh / PDF…"
+          }
+        }
+      }
+    },
+    "Combine Images / PDF": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ghép ảnh / PDF"
+          }
+        }
+      }
+    },
+    "Combine Images / PDF…": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ghép ảnh / PDF…"
+          }
+        }
+      }
+    },
+    "Combined Images": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ảnh đã ghép"
+          }
+        }
+      }
+    },
+    "Composition completed": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã hoàn tất ghép ảnh"
+          }
+        }
+      }
+    },
     "Connect": {
       "localizations": {
         "vi": {
@@ -1240,6 +1656,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hãy kết nối iSnap với DocVault trước."
+          }
+        }
+      }
+    },
+    "Connect the workflow upload provider and select its workspace before running it.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kết nối dịch vụ tải lên của quy trình và chọn không gian làm việc trước khi chạy."
           }
         }
       }
@@ -1346,12 +1772,32 @@
         }
       }
     },
+    "Copy Link": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sao chép liên kết"
+          }
+        }
+      }
+    },
     "Copy Path": {
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Sao chép đường dẫn"
+          }
+        }
+      }
+    },
+    "Copy Selection": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sao chép phần chọn"
           }
         }
       }
@@ -1382,6 +1828,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sao chép ảnh đã sửa (%@)"
+          }
+        }
+      }
+    },
+    "Copy image": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sao chép ảnh"
           }
         }
       }
@@ -1568,6 +2024,16 @@
         }
       }
     },
+    "Direction": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hướng"
+          }
+        }
+      }
+    },
     "Directory": {
       "localizations": {
         "vi": {
@@ -1708,12 +2174,43 @@
         }
       }
     },
+    "Drafts": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bản nháp"
+          }
+        }
+      }
+    },
     "Drag to capture • Esc to cancel": {
+      "extractionState": "stale",
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Kéo để chụp • Esc để huỷ"
+          }
+        }
+      }
+    },
+    "Drag to capture • Hold Space to move • Release to capture • Esc to cancel": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kéo để chọn vùng • Giữ Space để di chuyển • Thả chuột để chụp • Esc để hủy"
+          }
+        }
+      }
+    },
+    "Duplicate": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nhân bản"
           }
         }
       }
@@ -1849,6 +2346,16 @@
         }
       }
     },
+    "Equal spacing": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Khoảng cách đều"
+          }
+        }
+      }
+    },
     "Export": {
       "localizations": {
         "vi": {
@@ -1859,7 +2366,48 @@
         }
       }
     },
+    "Export CSV…": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xuất CSV…"
+          }
+        }
+      }
+    },
+    "Export PDF…": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xuất PDF…"
+          }
+        }
+      }
+    },
+    "Export PNG…": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xuất PNG…"
+          }
+        }
+      }
+    },
+    "Export cancelled": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã hủy xuất"
+          }
+        }
+      }
+    },
     "Exported %@": {
+      "extractionState": "stale",
       "localizations": {
         "vi": {
           "stringUnit": {
@@ -2117,6 +2665,16 @@
         }
       }
     },
+    "Gap %lld px": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cách %lld px"
+          }
+        }
+      }
+    },
     "Gestures": {
       "localizations": {
         "vi": {
@@ -2188,6 +2746,16 @@
         }
       }
     },
+    "H": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "H"
+          }
+        }
+      }
+    },
     "Hang new captures on a line under the menu bar": {
       "localizations": {
         "vi": {
@@ -2219,6 +2787,16 @@
         }
       }
     },
+    "Horizontal": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ngang"
+          }
+        }
+      }
+    },
     "Hotkeys": {
       "localizations": {
         "vi": {
@@ -2236,6 +2814,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ý tưởng"
+          }
+        }
+      }
+    },
+    "Ignore fixed areas (px)": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bỏ vùng cố định (px)"
           }
         }
       }
@@ -2260,12 +2848,32 @@
         }
       }
     },
+    "Image size": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kích thước ảnh"
+          }
+        }
+      }
+    },
     "Include canvas background": {
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Kèm nền canvas"
+          }
+        }
+      }
+    },
+    "Include captions": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kèm chú thích"
           }
         }
       }
@@ -2366,7 +2974,16 @@
         }
       }
     },
-    "JPEG": {},
+    "JPEG": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JPEG"
+          }
+        }
+      }
+    },
     "JPEG quality": {
       "localizations": {
         "vi": {
@@ -2378,11 +2995,22 @@
       }
     },
     "Keep fixed headers and scrollbars outside the selected region.": {
+      "extractionState": "stale",
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Không chọn phần tiêu đề cố định và thanh cuộn trong vùng chụp."
+          }
+        }
+      }
+    },
+    "Keep layout": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giữ bố cục"
           }
         }
       }
@@ -2403,6 +3031,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ngôn ngữ"
+          }
+        }
+      }
+    },
+    "Largest Dimensions": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kích thước ảnh lớn nhất"
+          }
+        }
+      }
+    },
+    "Largest File": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dung lượng lớn nhất"
           }
         }
       }
@@ -2486,6 +3134,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Oải hương"
+          }
+        }
+      }
+    },
+    "Layer name": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tên lớp"
+          }
+        }
+      }
+    },
+    "Layers": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lớp"
           }
         }
       }
@@ -2590,6 +3258,16 @@
         }
       }
     },
+    "Lock or unlock layer": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Khóa hoặc mở khóa lớp"
+          }
+        }
+      }
+    },
     "Lock position and size": {
       "localizations": {
         "vi": {
@@ -2629,6 +3307,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Yêu thích"
+          }
+        }
+      }
+    },
+    "Manage Drafts…": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quản lý bản nháp…"
+          }
+        }
+      }
+    },
+    "Manage Workflows…": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quản lý quy trình…"
           }
         }
       }
@@ -2736,6 +3434,7 @@
       }
     },
     "Move All to Trash": {
+      "extractionState": "stale",
       "localizations": {
         "vi": {
           "stringUnit": {
@@ -2766,11 +3465,32 @@
       }
     },
     "Move all screenshots to Trash?": {
+      "extractionState": "stale",
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Chuyển tất cả ảnh vào Thùng rác?"
+          }
+        }
+      }
+    },
+    "Move old drafts to Trash": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chuyển bản nháp cũ vào Thùng rác"
+          }
+        }
+      }
+    },
+    "Move selected drafts to Trash?": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chuyển các bản nháp đã chọn vào Thùng rác?"
           }
         }
       }
@@ -2796,6 +3516,7 @@
       }
     },
     "Moved %@ to Trash": {
+      "extractionState": "stale",
       "localizations": {
         "vi": {
           "stringUnit": {
@@ -2826,11 +3547,22 @@
       }
     },
     "Moved 1 screenshot to Trash": {
+      "extractionState": "stale",
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Đã chuyển 1 ảnh vào Thùng rác"
+          }
+        }
+      }
+    },
+    "Name": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tên"
           }
         }
       }
@@ -2846,6 +3578,36 @@
         }
       }
     },
+    "Never": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không bao giờ"
+          }
+        }
+      }
+    },
+    "Newest First": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mới nhất trước"
+          }
+        }
+      }
+    },
+    "Next image": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ảnh tiếp theo"
+          }
+        }
+      }
+    },
     "No Matching Screenshots": {
       "localizations": {
         "vi": {
@@ -2857,6 +3619,7 @@
       }
     },
     "No Screenshots Yet": {
+      "extractionState": "stale",
       "localizations": {
         "vi": {
           "stringUnit": {
@@ -3048,6 +3811,26 @@
         }
       }
     },
+    "Off": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tắt"
+          }
+        }
+      }
+    },
+    "Oldest First": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cũ nhất trước"
+          }
+        }
+      }
+    },
     "One Hundred": {
       "extractionState": "manual",
       "localizations": {
@@ -3095,6 +3878,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mở %@ trong trình chỉnh sửa"
+          }
+        }
+      }
+    },
+    "Open Combined Image": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mở ảnh đã ghép"
           }
         }
       }
@@ -3269,7 +4062,26 @@
         }
       }
     },
-    "PNG": {},
+    "PDF uses one image per page in the displayed order. Combined images can be annotated in the editor.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF chứa một ảnh trên mỗi trang theo thứ tự hiển thị. Có thể chú thích ảnh đã ghép trong trình chỉnh sửa."
+          }
+        }
+      }
+    },
+    "PNG": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PNG"
+          }
+        }
+      }
+    },
     "Padding": {
       "localizations": {
         "vi": {
@@ -3393,6 +4205,16 @@
         }
       }
     },
+    "Previous image": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ảnh trước"
+          }
+        }
+      }
+    },
     "Projects and Drafts": {
       "localizations": {
         "vi": {
@@ -3423,6 +4245,16 @@
         }
       }
     },
+    "Quick Look": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xem nhanh"
+          }
+        }
+      }
+    },
     "Quick Save": {
       "localizations": {
         "vi": {
@@ -3434,6 +4266,7 @@
       }
     },
     "Quick-saved screenshots will appear here.": {
+      "extractionState": "stale",
       "localizations": {
         "vi": {
           "stringUnit": {
@@ -3583,12 +4416,62 @@
         }
       }
     },
+    "Remove fixed footer from every frame": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bỏ phần chân cố định khỏi mọi khung hình"
+          }
+        }
+      }
+    },
+    "Remove fixed header from every frame": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bỏ phần đầu cố định khỏi mọi khung hình"
+          }
+        }
+      }
+    },
     "Removes the network cache, the text recognition model cache, files prepared for sharing, and widget thumbnails. iSnap rebuilds them when needed. Screenshots, backgrounds, and settings are kept.": {
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Xoá bộ nhớ đệm mạng, bộ nhớ đệm mô hình nhận dạng chữ, các file đã chuẩn bị để chia sẻ và ảnh thu nhỏ của widget. iSnap sẽ tạo lại khi cần. Ảnh chụp, ảnh nền và cài đặt được giữ nguyên."
+          }
+        }
+      }
+    },
+    "Rename": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đổi tên"
+          }
+        }
+      }
+    },
+    "Rename Draft": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đổi tên bản nháp"
+          }
+        }
+      }
+    },
+    "Rendering export…": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang dựng ảnh xuất…"
           }
         }
       }
@@ -3663,6 +4546,26 @@
         }
       }
     },
+    "Retention runs when iSnap starts or this window opens. The latest recovery session is always kept.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bản nháp cũ được dọn khi iSnap khởi động hoặc khi mở cửa sổ này. Phiên khôi phục gần nhất luôn được giữ lại."
+          }
+        }
+      }
+    },
+    "Retry Upload": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tải lên lại"
+          }
+        }
+      }
+    },
     "Reveal in Finder": {
       "localizations": {
         "vi": {
@@ -3715,6 +4618,16 @@
         }
       }
     },
+    "Running workflow…": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang chạy quy trình…"
+          }
+        }
+      }
+    },
     "Save": {
       "localizations": {
         "vi": {
@@ -3735,6 +4648,16 @@
         }
       }
     },
+    "Save All": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lưu tất cả"
+          }
+        }
+      }
+    },
     "Save Edited Image": {
       "localizations": {
         "vi": {
@@ -3751,6 +4674,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lưu dự án…"
+          }
+        }
+      }
+    },
+    "Save Workflow": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lưu quy trình"
           }
         }
       }
@@ -3781,6 +4714,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lưu ra Màn hình nền"
+          }
+        }
+      }
+    },
+    "Save to Library": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lưu vào Thư viện"
           }
         }
       }
@@ -3895,6 +4838,16 @@
         }
       }
     },
+    "Scroll automatically before the next capture": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tự động cuộn trước lần chụp tiếp theo"
+          }
+        }
+      }
+    },
     "Scroll down in the source app, leaving part of the previous capture visible, then capture the next frame.": {
       "localizations": {
         "vi": {
@@ -3931,6 +4884,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Các khung ảnh cuộn phải có cùng chiều rộng và phần trùng hợp lệ."
+          }
+        }
+      }
+    },
+    "Seam detail": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chi tiết đường nối"
           }
         }
       }
@@ -4001,6 +4964,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chọn các dòng cần che bằng màu đen. Gợi ý tìm địa chỉ email và số điện thoại; hãy kiểm tra ảnh để che thêm nội dung khác nếu cần."
+          }
+        }
+      }
+    },
+    "Send to Back": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đưa ra sau"
           }
         }
       }
@@ -4095,6 +5068,26 @@
         }
       }
     },
+    "Shortcut": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phím tắt"
+          }
+        }
+      }
+    },
+    "Shortcuts unavailable: %@": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phím tắt không khả dụng: %@"
+          }
+        }
+      }
+    },
     "Show Drafts in Finder": {
       "localizations": {
         "vi": {
@@ -4175,6 +5168,16 @@
         }
       }
     },
+    "Show or hide layer": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiện hoặc ẩn lớp"
+          }
+        }
+      }
+    },
     "Show the line": {
       "localizations": {
         "vi": {
@@ -4215,6 +5218,16 @@
         }
       }
     },
+    "Size %lld px": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cỡ %lld px"
+          }
+        }
+      }
+    },
     "Sky": {
       "extractionState": "manual",
       "localizations": {
@@ -4237,12 +5250,52 @@
         }
       }
     },
+    "Snap": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bắt dính"
+          }
+        }
+      }
+    },
+    "Snap to edges, centers and equal spacing. Hold Option to move freely.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bắt dính vào mép, tâm và khoảng cách đều. Giữ Option để di chuyển tự do."
+          }
+        }
+      }
+    },
     "Software updates": {
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Cập nhật phần mềm"
+          }
+        }
+      }
+    },
+    "Sort": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sắp xếp"
+          }
+        }
+      }
+    },
+    "Spacing %lld px": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Khoảng cách %lld px"
           }
         }
       }
@@ -4346,6 +5399,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dừng xuất"
+          }
+        }
+      }
+    },
+    "Stop Workflow": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dừng quy trình"
           }
         }
       }
@@ -4675,6 +5738,16 @@
         }
       }
     },
+    "The workflow preset no longer exists. Choose another preset before running it.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mẫu của quy trình không còn tồn tại. Chọn mẫu khác trước khi chạy."
+          }
+        }
+      }
+    },
     "Thinking": {
       "extractionState": "manual",
       "localizations": {
@@ -4697,6 +5770,7 @@
       }
     },
     "This removes every screenshot currently shown in the Library. You can recover them from the Trash.": {
+      "extractionState": "stale",
       "localizations": {
         "vi": {
           "stringUnit": {
@@ -4878,12 +5952,52 @@
         }
       }
     },
+    "Upload History": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lịch sử tải lên"
+          }
+        }
+      }
+    },
+    "Upload History…": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lịch sử tải lên…"
+          }
+        }
+      }
+    },
+    "Upload after capture": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tải lên sau khi chụp"
+          }
+        }
+      }
+    },
     "Upload and Copy Link": {
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Tải lên và sao chép liên kết"
+          }
+        }
+      }
+    },
+    "Upload cancelled": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã hủy tải lên"
           }
         }
       }
@@ -4928,12 +6042,32 @@
         }
       }
     },
+    "Use a name and a unique shortcut with at least one modifier.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nhập tên và phím tắt không trùng, có ít nhất một phím bổ trợ."
+          }
+        }
+      }
+    },
     "Use current editor canvas and watermark": {
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
             "value": "Dùng khung ảnh và dấu bản quyền đang chỉnh sửa"
+          }
+        }
+      }
+    },
+    "Use modifier symbols, for example ⌃⌥9.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dùng ký hiệu phím bổ trợ, ví dụ ⌃⌥9."
           }
         }
       }
@@ -4964,6 +6098,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Giá trị"
+          }
+        }
+      }
+    },
+    "Vertical": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dọc"
+          }
+        }
+      }
+    },
+    "W": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W"
           }
         }
       }
@@ -5040,6 +6194,16 @@
         }
       }
     },
+    "Watermark text (optional)": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chữ watermark (tùy chọn)"
+          }
+        }
+      }
+    },
     "Web app": {
       "localizations": {
         "vi": {
@@ -5090,6 +6254,36 @@
         }
       }
     },
+    "Workflow cancelled": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã hủy quy trình"
+          }
+        }
+      }
+    },
+    "Workflow completed": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã hoàn tất quy trình"
+          }
+        }
+      }
+    },
+    "Workflows": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quy trình"
+          }
+        }
+      }
+    },
     "Wrong": {
       "extractionState": "manual",
       "localizations": {
@@ -5097,6 +6291,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sai"
+          }
+        }
+      }
+    },
+    "X": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "X"
+          }
+        }
+      }
+    },
+    "Y": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Y"
           }
         }
       }
@@ -5131,7 +6345,16 @@
         }
       }
     },
-    "iSnap": {},
+    "iSnap": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iSnap"
+          }
+        }
+      }
+    },
     "iSnap %@ is available": {
       "localizations": {
         "vi": {
@@ -5198,6 +6421,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ảnh chụp của macOS"
+          }
+        }
+      }
+    },
+    "⌃⌥N is unavailable. Use Capture Next.": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không thể dùng ⌃⌥N. Hãy nhấn Chụp tiếp."
           }
         }
       }

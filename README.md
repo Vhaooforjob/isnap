@@ -18,13 +18,15 @@ iSnap is written in Swift with SwiftUI, AppKit, and ScreenCaptureKit. No web vie
 
 ### Capture the screen you are looking at
 
-`⌃⌥1` captures the display under the pointer, `⌃⌥2` drags a region on any display, `⌃⌥3` picks an application window, and **All Displays** stitches every screen into one image. Captures open in the editor and are archived to your Library automatically.
+`⌃⌥1` captures the display under the pointer, `⌃⌥2` drags a region on any display, `⌃⌥3` picks an application window, and **All Displays** stitches every screen into one image. Captures open in the editor and are archived to your Library automatically. Region capture includes a pixel loupe, output dimensions and Space-drag repositioning; releasing the mouse captures immediately. Configurable workflows apply a preset/watermark and save, copy or explicitly opt into uploading with one shortcut.
 
 ### Annotate and beautify
 
-Rectangles, ellipses, arrows (straight or curved), lines, text, numbered or lettered markers, spotlight, image overlays, and emoji stickers, all movable, resizable, and rotatable with undo/redo. Frame the result with 24 gradients or your own background, padding, rounded corners, shadow, border, output ratio, and a text or image watermark. Crop non-destructively.
+Rectangles, ellipses, arrows (straight or curved), lines, text, numbered or lettered markers, spotlight, image overlays, and emoji stickers, all movable, resizable, and rotatable with undo/redo. Frame the result with 24 gradients or your own background, padding, rounded corners, shadow, border, output ratio, and a text or image watermark. Crop non-destructively. Name, hide, lock and reorder layers; use smart guides, snapping and exact X/Y/W/H values for alignment.
 
 <p align="center"><img src="docs/assets/screenshots/editor.png" width="820" alt="The iSnap editor with arrows, numbered markers, a sticker, and a gradient frame"></p>
+
+Select OCR regions to copy text or infer CSV columns. Combine saved images horizontally/vertically with captions, or export a multipage PDF. Export/upload work runs in the background with cancellation, upload retry and local link history. Autosaved drafts share image assets and keep a previous recovery snapshot; exported `.isnap` projects remain portable.
 
 ### The Capture Line
 
@@ -48,6 +50,9 @@ One Share menu on Capture Line cards, in the editor, and in the Library: AirDrop
 - **Privacy tools:** solid redaction, blur, pixelation, and reviewed on-device suggestions for email addresses and phone numbers
 - **Searchable Library:** local OCR search, tags, favorites, date filters, multiple selection and batch export with presets, watermarks, resizing and filename prefixes
 - **Capture options:** repeat the last region, 3/5/10-second delay, optional cursor, and manual scrolling capture with overlap detection and seam review
+- **Faster editing:** bounded cached previews, background autosave, group selection, keyboard nudging, duplication and alignment
+- **Draft manager:** thumbnails, rename, bulk Trash and optional retention; Library adds Quick Look, range selection, sorting and highlighted OCR matches
+- **Scrolling capture helpers:** session shortcut, zoomable seam detail, fixed header/footer trimming and optional one-step automatic scrolling
 - **Reusable canvas presets** and floating pinned images with opacity and position lock
 
 | Hotkeys | Text extraction | Storage |

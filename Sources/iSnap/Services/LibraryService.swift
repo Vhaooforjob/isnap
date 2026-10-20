@@ -2,7 +2,7 @@ import Foundation
 
 actor LibraryService {
     func items(in folder: URL) throws -> [LibraryItem] {
-        let keys: Set<URLResourceKey> = [.contentModificationDateKey, .isRegularFileKey]
+        let keys: Set<URLResourceKey> = [.contentModificationDateKey, .isRegularFileKey, .fileSizeKey]
         let urls = try FileManager.default.contentsOfDirectory(
             at: folder,
             includingPropertiesForKeys: Array(keys),
@@ -13,7 +13,8 @@ actor LibraryService {
                   let values = try? url.resourceValues(forKeys: keys),
                   values.isRegularFile == true,
                   let dimensions = ImageIOService.pixelSize(at: url) else { return nil }
-            return LibraryItem(url: url, modifiedAt: values.contentModificationDate ?? .distantPast, dimensions: dimensions)
+            return LibraryItem(url: url, modifiedAt: values.contentModificationDate ?? .distantPast, dimensions: dimensions,
+                byteCount: values.fileSize ?? 0)
         }.sorted { $0.modifiedAt > $1.modifiedAt }
     }
 
@@ -24,7 +25,9 @@ actor LibraryService {
     func delete(_ item: LibraryItem, rootFolder: URL) throws {
         let root = rootFolder.standardizedFileURL.resolvingSymlinksInPath()
         let target = item.url.standardizedFileURL.resolvingSymlinksInPath()
-        guard target.deletingLastPathComponent() == root else { return }
+        guard target.deletingLastPathComponent() == root else {
+            throw CocoaError(.fileWriteNoPermission)
+        }
         try FileManager.default.trashItem(at: target, resultingItemURL: nil)
     }
 

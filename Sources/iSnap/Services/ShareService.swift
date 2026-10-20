@@ -141,7 +141,7 @@ enum ShareService {
     /// Writes rendered image data to the share cache under a readable name.
     /// Prepared files older than an hour are removed first, so the cache does
     /// not grow while a recent share (an AirDrop still sending) keeps its file.
-    static func prepareFile(_ data: Data, fileExtension: String) throws -> URL {
+    nonisolated static func prepareFile(_ data: Data, fileExtension: String) throws -> URL {
         let folder = StorageService.shareFolder
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let cutoff = Date().addingTimeInterval(-3_600)
@@ -153,7 +153,7 @@ enum ShareService {
         }
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
-        let url = folder.appendingPathComponent("iSnap \(formatter.string(from: Date())).\(fileExtension)")
+        let url = folder.appendingPathComponent("iSnap \(formatter.string(from: Date()))-\(UUID().uuidString.prefix(8)).\(fileExtension)")
         try data.write(to: url, options: .atomic)
         return url
     }

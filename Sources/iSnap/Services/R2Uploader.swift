@@ -40,7 +40,7 @@ actor R2Uploader {
         _ = try await request(config: config, method: "HEAD", objectKey: nil, body: Data(), contentType: "application/octet-stream")
     }
 
-    func upload(_ data: Data, filename: String, config: AppSettings.R2Settings) async throws -> URL {
+    func upload(_ data: Data, filename: String, config: AppSettings.R2Settings, progress: UploadProgressDelegate? = nil) async throws -> URL {
         guard data.count <= 50 * 1024 * 1024 else { throw CloudUploadError.fileTooLarge }
         let directory = config.directory.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         let key = directory.isEmpty ? filename : "\(directory)/\(filename)"
@@ -49,7 +49,8 @@ actor R2Uploader {
             method: "PUT",
             objectKey: key,
             body: data,
-            contentType: filename.lowercased().hasSuffix(".png") ? "image/png" : "image/jpeg"
+            contentType: filename.lowercased().hasSuffix(".png") ? "image/png" : "image/jpeg",
+            progress: progress
         )
         let encodedPath = key.split(separator: "/").map { String($0).addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? String($0) }.joined(separator: "/")
         guard let url = URL(string: config.publicURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/" + encodedPath) else {
@@ -63,7 +64,8 @@ actor R2Uploader {
         method: String,
         objectKey: String?,
         body: Data,
-        contentType: String
+        contentType: String,
+        progress: UploadProgressDelegate? = nil
     ) async throws -> HTTPURLResponse {
         guard isConfigured(config),
               let accessKey = keychain.value(for: .r2AccessKeyID),
@@ -100,7 +102,7 @@ actor R2Uploader {
         request.setValue(payloadHash, forHTTPHeaderField: "x-amz-content-sha256")
         request.setValue(dateTime, forHTTPHeaderField: "x-amz-date")
         request.setValue("AWS4-HMAC-SHA256 Credential=\(accessKey)/\(scope), SignedHeaders=\(signedHeaders), Signature=\(signature)", forHTTPHeaderField: "Authorization")
-        let (_, response) = try await session.data(for: request)
+        let (_, response) = try await session.data(for: request, delegate: progress)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
             throw CloudUploadError.invalidResponse("R2 returned HTTP \(status). Check the bucket, token permissions, and account ID.")

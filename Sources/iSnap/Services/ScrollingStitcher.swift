@@ -11,6 +11,24 @@ enum StitchError: LocalizedError {
 }
 
 enum ScrollingStitcher {
+    static func trim(_ image: CGImage, top: Int, bottom: Int) throws -> CGImage {
+        guard top >= 0, bottom >= 0, top < image.height, bottom < image.height,
+              top + bottom < image.height - 31,
+              let cropped = image.cropping(to: CGRect(x: 0, y: top, width: image.width, height: image.height - top - bottom)) else {
+            throw StitchError.incompatibleFrames
+        }
+        return cropped
+    }
+
+    static func seam(previous: CGImage, next: CGImage, overlap: Int) throws -> CGImage {
+        guard overlap >= 0, overlap < next.height,
+              let before = previous.cropping(to: CGRect(x: 0, y: max(0, previous.height - 80), width: previous.width, height: min(80, previous.height))),
+              let after = next.cropping(to: CGRect(x: 0, y: overlap, width: next.width, height: min(80, next.height - overlap))) else {
+            throw StitchError.incompatibleFrames
+        }
+        return try stitch([before, after], overlaps: [0])
+    }
+
     /// Estimate overlap only when there is enough detail and a clear match.
     /// Ambiguous/animated content remains available for manual alignment.
     static func estimateOverlap(previous: CGImage, next: CGImage) -> Int? {

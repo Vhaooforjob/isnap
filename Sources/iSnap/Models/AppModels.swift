@@ -189,6 +189,7 @@ struct LibraryItem: Identifiable, Hashable {
     let url: URL
     let modifiedAt: Date
     let dimensions: CGSize
+    var byteCount: Int = 0
     var id: URL { url }
     var name: String { url.lastPathComponent }
 }

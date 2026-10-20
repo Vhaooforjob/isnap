@@ -39,7 +39,7 @@ The menu bar icon gives you everything without opening the window:
 | Mode | Default shortcut | Result |
 | --- | --- | --- |
 | Screen | `⌃⌥1` | The whole display under the pointer. With several displays, point at the one you want. |
-| Region | `⌃⌥2` | Every display dims. Drag a rectangle on any of them; the size is shown as you drag. `Esc` cancels. |
+| Region | `⌃⌥2` | Every display dims. Drag a rectangle on any of them; a pixel loupe and output pixel dimensions help position the edges. Hold **Space** during the drag to move the whole rectangle. Release the mouse to capture immediately; `Esc` cancels. |
 | Window | `⌃⌥3` | A picker lists open windows with thumbnails; choose one. |
 | All Displays | toolbar or menu | Every display stitched into one image. |
 
@@ -47,16 +47,22 @@ You can also **Open…** (`⌘O`) or **Paste** (`⌘V`) an image into the editor
 
 The **timer menu** in the capture toolbar adds **Capture Last Region**, a **3/5/10-second delay**, and **Include cursor**. The last region is kept for the current app session and checked against the connected display before reuse. Delays apply to screen, region, window, all-displays, and repeat-region captures.
 
+### Capture workflows
+
+Open **timer menu → Workflows → Manage Workflows…**. Give each workflow a name and a unique shortcut with modifiers (for example `⌃⌥9`), choose region or screen capture, an optional saved canvas preset and watermark text, and whether to save and/or copy. **Save Workflow** or **Save All** applies changes, including removals. The menu can also run a workflow. Conflicting shortcuts are reported in the manager.
+
+Upload defaults to **Off**. Selecting a provider explicitly enables upload for every run of that workflow; the provider must be connected (with a workspace selected for DocVault). The workflow captures, applies its style, saves/copies as configured, opens the editable source and uploads if enabled. The uploaded link replaces the image on the clipboard. **Stop Workflow** cancels remaining work; files already saved are kept. Region workflows also capture immediately on mouse release.
+
 ### Scrolling capture
 
 Choose **Scrolling Capture…** in the timer menu or the Capture menu. Select a region containing the scrolling content, leaving fixed headers and scrollbars outside it. iSnap takes the first frame and opens a floating control panel.
 
-1. Scroll **down manually in the source app**, keeping part of the previous frame visible.
-2. Click **Capture Next**. The panel hides while the image is taken.
-3. Review the stitched preview. Adjust **Overlap (px)** if the suggested seam is wrong, then choose **Add Frame**. **Discard Frame** retries without changing the accepted frames.
+1. Before the second frame, optionally enter **Top** and **Bottom** pixel counts under **Ignore fixed areas**. Those strips are removed from every frame, including the first; these values lock once another frame is captured.
+2. Scroll down in the source app, keeping part of the previous frame visible, then press **⌃⌥N** from any app or click **Capture Next**. Alternatively enable **Scroll automatically before the next capture**: each capture scrolls the selected region once, then waits for it to settle. macOS Accessibility permission is required only for this option.
+3. Review the stitched preview and the zoomable **Seam detail**. Adjust **Overlap (px)** if needed, then choose **Add Frame** (`⌘Return`). **Discard Frame** retries without changing accepted frames.
 4. Repeat, then **Finish** to send the combined image to the normal editor, Library and Capture Line workflow. **Remove Last** undoes the last accepted frame; **Cancel** discards the session.
 
-This captures a fixed region vertically; it does not drive app scrolling automatically. Animated content, repeated patterns and sticky elements may need manual overlap adjustment. The output is limited to 60,000 pixels high and 80 million pixels in total.
+This captures a fixed region vertically. Automatic scrolling advances one step per request; every seam still requires review. Animated content, repeated patterns and sticky elements may need manual overlap adjustment. The global next-frame shortcut is registered only during a session; the panel reports if another app has reserved it. The output is limited to 60,000 pixels high and 80 million pixels in total.
 
 After a capture:
 
@@ -87,6 +93,14 @@ All shortcuts can be changed in **Settings → Hotkeys**: click a shortcut, then
 | Blur | toolbar | Blurs the selected rectangle. |
 | Pixelate | toolbar | Pixelates the selected rectangle. |
 
+With the Select tool, **Shift-click** or **Command-click** toggles annotations in a group. Drag the group or use arrow keys to move it by one source pixel; hold **Shift** for ten pixels. **⌘A** selects all annotations, **⌘D** duplicates the selection, **⌘]** brings it to the front and **⌘[** sends it to the back. The layers menu also offers edge/center alignment for multiple annotations. Group operations undo together. Privacy masks remain above other annotations in the rendered image.
+
+The right sidebar's **Layers** list supports names, visibility, locking and drag-to-reorder. Hidden layers are excluded from the preview and exported image; locked layers resist edits, moves, alignment and deletion. Their order and visibility can still be changed in the Layers list. Enter **X/Y/W/H** values and press Return to set the selected layer's frame in source pixels.
+
+With **Snap** enabled, dragging a layer or group shows guides at image/object edges and centers, and at equal gaps between neighboring objects. Resizing also matches object dimensions. Hold **Option** to bypass snapping. Image overlays retain their aspect ratio while dragging the resize handle.
+
+Preview bitmaps adapt to the view and zoom level and reuse their background. Saving, copying and exporting still use the full output resolution.
+
 Also in the toolbar: **Insert Image** (an overlay with its own opacity), **Sticker** (emoji stickers), **Undo**/**Redo**, zoom (pinch on a trackpad, or the zoom buttons; **Fit** resets), **Copy**, **Share**, and **Save**.
 
 The **… menu → Suggest Redactions…** scans the image on device for lines containing email addresses or phone numbers. Select the suggestions to apply; iSnap covers the whole selected line with opaque black. Review the image for information the detector missed. Use **Redact** when text must be completely covered; blur and pixelation are visual effects. Masks remain editable inside the project and are flattened into exported/copied images.
@@ -95,7 +109,9 @@ The **… menu → Suggest Redactions…** scans the image on device for lines c
 
 **… → Save Project…** (`⌥⌘S`) stores a `.isnap` file containing the source image, editable annotations, crop state, canvas and embedded image assets. **Open Project…**, or double-clicking the project in Finder, restores those layers. Regular **Save** and **Export** still produce PNG/JPEG images.
 
-iSnap saves the active draft shortly after changes and preserves the previous document before replacing it. It restores the latest session when launched. **… → Recent Drafts** opens previous documents; **Show Drafts in Finder** lets you manage the saved files. If preserving a draft fails, the editor keeps the current document. Drafts live in `~/Library/Application Support/iSnap/Drafts` and are not removed by Clear Cache.
+iSnap saves the active draft shortly after changes and preserves the previous document before replacing it. It restores the latest session when launched. **… → Recent Drafts** opens previous documents. **Manage Drafts…** shows thumbnails, dates and sizes, with rename and multiple-selection Trash actions. Draft retention defaults to **Never**; optionally move drafts older than 7, 30 or 90 days to Trash on the next launch or opening of the manager. The latest and previous recovery sessions are always kept. If the latest recovery is unreadable, iSnap tries the previous one. **Show Drafts in Finder** opens the underlying folder. If preserving a draft fails, the editor keeps the current document. Drafts live in `~/Library/Application Support/iSnap/Drafts` and are not removed by Clear Cache.
+
+Autosaved drafts share content-addressed image assets in `Drafts/.Assets`, keeping repeated changes small. Draft thumbnails are cached. Keep that folder with the draft manifests; use **Save Project…** to produce a portable single file. Drafts sent to Trash through the manager embed their assets first, so they can be restored independently. Unused shared assets are removed after draft cleanup; damaged manifests prevent cleanup to protect recovery data.
 
 Projects and drafts retain the original pixels, including content underneath redactions. Share the exported PNG/JPEG when you intend to share only the rendered result.
 
@@ -122,6 +138,12 @@ The panel on the right styles the exported image:
 | Share | toolbar or status bar | See [Sharing](#sharing) |
 
 Format (PNG or JPEG), JPEG quality, whether the canvas background is included, and copying after a quick save are set in **Settings → Export**.
+
+Rendering and encoding exports, clipboard images and upload images run in the background. The status bar offers **Cancel Export**, upload progress, **Cancel Upload** and **Retry Upload** after a failed/cancelled upload. Retry uses the rendered image retained for that attempt. **… → Upload History…** keeps the latest 100 successful links with provider/date and copy/open actions. Clearing history removes local links, not remote files. Cancellation is cooperative; files already written and uploads already accepted by a provider can remain.
+
+### Extract text and tables
+
+**Extract Text** recognizes the current rendered image, including visible annotations and masks. In the result, click recognized text regions to select individual lines/cells, then **Copy Selection**. **Keep layout** preserves approximate horizontal spacing. **Export CSV…** exports selected regions, or all regions if none are selected, with columns inferred from their positions. Review inferred tables: OCR may merge cells or misread small text. The text editor and **Copy Text** remain available for correcting/copying the full text.
 
 ## The Capture Line
 
@@ -183,11 +205,15 @@ The same Share menu is available on Capture Line cards, in the editor toolbar an
 
 ## Library and widgets
 
-Use the Library search field to match filenames, tags or recognized text in images. OCR indexing runs locally in the background; an indexing indicator shows progress. **Refresh** retries images that could not be indexed. Very small text may not survive the bounded-resolution image used for indexing.
+Use the Library search field to match filenames, tags or recognized text in images. Matching OCR snippets appear under cards with the match highlighted. Sort by newest, oldest, name, file size or pixel dimensions. OCR indexing runs locally in the background; an indexing indicator shows progress. **Refresh** retries images that could not be indexed. Very small text may not survive the bounded-resolution image used for indexing.
 
 Use the star to mark favorites, filter by the last 7 or 30 days (file modification date), and choose **Edit Tags** to add comma-separated tags. Tags and favorites are stored locally by file path. Moving or renaming files outside iSnap does not migrate their tags automatically.
 
-Click a checkbox or Command-click to select multiple images. **Select All** selects the currently filtered results. **Batch Export…** exports those images to a chosen folder with an optional saved preset or current canvas/watermark, PNG/JPEG format, maximum dimension and filename prefix. Leave the prefix blank to keep source names. Existing files are never overwritten; colliding names receive a suffix. **Stop Export** keeps files already completed. Batch export operates on the saved images in the Library, not unsaved editor layers.
+Click a checkbox or Command-click to select multiple images; **Shift-click** selects a range in the current sort order. With the grid focused, arrow keys navigate and **Shift-arrow** extends the selection. **Space** opens Quick Look; Left/Right browse images and Space/Escape closes it. **Return** opens the selected image in the editor. The Library refreshes when iSnap becomes active; deleting images also removes their OCR index and tags, including after deletion in Finder.
+
+ **Select All** selects the currently filtered results. **Batch Export…** exports those images to a chosen folder with an optional saved preset or current canvas/watermark, PNG/JPEG format, maximum dimension and filename prefix. Leave the prefix blank to keep source names. Existing files are never overwritten; colliding names receive a suffix. **Stop Export** keeps files already completed. Batch export operates on the saved images in the Library, not unsaved editor layers.
+
+Select saved images and choose **Combine / PDF…**, or open **… → Combine Images / PDF…** and add files. Change their order, edit captions and choose vertical/horizontal layout, spacing and size. **Open Combined Image** sends the result to the editor; **Export PNG…** writes it directly. **Export PDF…** uses one image per page in list order, with optional captions. PDF image dimensions are capped at 4096 pixels on the longest edge; combined PNGs are limited to 80 million pixels and 60,000 pixels per axis. These actions use saved source files, so save current edits first if you want them included.
 
 **Pin on Screen** is available in the Library and Capture Line context menus, and in the editor's **… menu**. Each image floats above normal windows, with opacity, position/size lock, and a close button. Pinned images are independent of the source file and last for the current app session.
 
@@ -255,7 +281,12 @@ Choose **System Default**, **English**, or **Tiếng Việt** from **menu bar ic
 | `⌘S` / `⇧⌘S` | Save to Library / Export… |
 | `⌘C` | Copy the edited image |
 | `V` `C` `R` `E` `A` `L` `T` `N` `S` | Select, Crop, Rectangle, Ellipse, Arrow, Line, Text, Number, Spotlight |
-| `Delete` | Delete the selected annotation |
+| `Delete` | Delete selected annotations |
+| Arrow keys / `Shift` + arrow | Move selected annotations 1 / 10 pixels |
+| `⌘A` / `⌘D` (canvas focused) | Select all annotations / duplicate selection |
+| `⌘]` / `⌘[` (canvas focused) | Bring selection to front / send to back |
+| `Space` (Library grid focused) | Quick Look |
+| `⌃⌥N` (scrolling session) | Capture next frame |
 | `Esc` | Cancel a region selection |
 | `⌘,` | Settings |
 

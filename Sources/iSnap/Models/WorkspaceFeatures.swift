@@ -23,6 +23,7 @@ struct WorkspaceState: Codable {
     var metadata: [String: LibraryMetadata] = [:]
     var captureDelay = 0
     var showsCursor = false
+    var workflows: [CaptureWorkflow]?
 }
 
 @MainActor
@@ -48,6 +49,32 @@ final class WorkspaceFeatures: ObservableObject {
 
     func metadata(for url: URL) -> LibraryMetadata { state.metadata[url.standardizedFileURL.path] ?? LibraryMetadata() }
     func setMetadata(_ value: LibraryMetadata, for url: URL) { state.metadata[url.standardizedFileURL.path] = value }
+
+    func setTags(_ tags: [String], for urls: [URL]) {
+        var updated = state
+        for url in urls {
+            let path = url.standardizedFileURL.path
+            var value = updated.metadata[path] ?? LibraryMetadata()
+            value.tags = tags
+            updated.metadata[path] = value
+        }
+        state = updated
+    }
+
+    func removeMetadata(for urls: [URL]) {
+        let paths = Set(urls.map { $0.standardizedFileURL.path })
+        let updated = state.metadata.filter { !paths.contains($0.key) }
+        if updated.count != state.metadata.count { state.metadata = updated }
+    }
+
+    func pruneMetadata(in folder: URL, keeping urls: Set<URL>) {
+        let root = folder.standardizedFileURL
+        let paths = Set(urls.map { $0.standardizedFileURL.path })
+        let updated = state.metadata.filter {
+            URL(fileURLWithPath: $0.key).deletingLastPathComponent() != root || paths.contains($0.key)
+        }
+        if updated.count != state.metadata.count { state.metadata = updated }
+    }
 }
 
 struct IndexedScreenshot: Codable, Sendable {
@@ -86,5 +113,14 @@ actor LibrarySearchIndex {
 
     func remove(_ urls: [URL]) {
         for url in urls { entries.removeValue(forKey: url.standardizedFileURL.path) }
+    }
+
+    func prune(in folder: URL, keeping urls: Set<URL>) throws {
+        let root = folder.standardizedFileURL
+        let paths = Set(urls.map { $0.standardizedFileURL.path })
+        entries = entries.filter {
+            URL(fileURLWithPath: $0.key).deletingLastPathComponent() != root || paths.contains($0.key)
+        }
+        try save()
     }
 }
