@@ -135,7 +135,7 @@ final class AppModel: ObservableObject {
                 (workflow.shortcut, { [weak self] in self?.runWorkflow(workflow) })
             })
         }.store(in: &cancellables)
-        uploadHistory = UploadHistoryStore.read()
+        if FeatureAvailability.cloud { uploadHistory = UploadHistoryStore.read() }
         restoreLatestDraft()
         Task {
             do {
@@ -150,6 +150,7 @@ final class AppModel: ObservableObject {
         Task { await refreshStorage() }
         hotkeys.register(settings.value.hotkeys)
         Task {
+            guard FeatureAvailability.cloud else { return }
             r2Connected = await r2Uploader.isConfigured(settings.value.cloud.r2)
             googleDriveConnected = await googleDriveUploader.isConnected()
             docVaultConnected = await docVaultService.isConnected(config: settings.value.cloud.docVault)
@@ -534,6 +535,7 @@ final class AppModel: ObservableObject {
     }
 
     func configureR2(accessKeyID: String, secretAccessKey: String) async {
+        guard FeatureAvailability.cloud else { return }
         do {
             try await r2Uploader.saveCredentials(accessKeyID: accessKeyID, secretAccessKey: secretAccessKey)
             statusText = String(localized: "Testing Cloudflare R2…")
@@ -547,6 +549,7 @@ final class AppModel: ObservableObject {
     }
 
     func connectGoogleDrive(clientID: String, clientSecret: String) async {
+        guard FeatureAvailability.cloud else { return }
         do {
             try await googleDriveUploader.saveCredentials(clientID: clientID, clientSecret: clientSecret)
             statusText = String(localized: "Waiting for Google authorization…")
@@ -557,6 +560,7 @@ final class AppModel: ObservableObject {
     }
 
     func disconnectGoogleDrive() async {
+        guard FeatureAvailability.cloud else { return }
         do {
             try await googleDriveUploader.disconnect()
             googleDriveConnected = false
@@ -569,7 +573,7 @@ final class AppModel: ObservableObject {
     }
 
     func connectDocVault() async {
-        guard !isRefreshingDocVault else { return }
+        guard FeatureAvailability.cloud, !isRefreshingDocVault else { return }
         isRefreshingDocVault = true
         statusText = String(localized: "Waiting for DocVault sign-in…")
         defer { isRefreshingDocVault = false }
@@ -582,6 +586,7 @@ final class AppModel: ObservableObject {
     }
 
     func disconnectDocVault() async {
+        guard FeatureAvailability.cloud else { return }
         do {
             try await docVaultService.disconnect(config: settings.value.cloud.docVault)
             docVaultConnected = false
@@ -593,7 +598,7 @@ final class AppModel: ObservableObject {
     }
 
     func refreshDocVault(showError: Bool = true) async {
-        guard !isRefreshingDocVault else { return }
+        guard FeatureAvailability.cloud, !isRefreshingDocVault else { return }
         isRefreshingDocVault = true
         defer { isRefreshingDocVault = false }
         do {
@@ -607,6 +612,7 @@ final class AppModel: ObservableObject {
     }
 
     func selectDocVaultStorageAccount(_ accountID: String) async {
+        guard FeatureAvailability.cloud else { return }
         do {
             _ = try await docVaultService.setDefaultStorageAccount(accountID, config: settings.value.cloud.docVault)
             await refreshDocVault()
@@ -618,7 +624,7 @@ final class AppModel: ObservableObject {
 
     /// Uploads the edited image.
     func upload(to provider: CloudProvider) async {
-        guard !isUploading else { return }
+        guard FeatureAvailability.cloud, !isUploading else { return }
         do {
             let snapshot = try renderSnapshot(), preferences = settings.value
             retryData = nil
@@ -641,7 +647,7 @@ final class AppModel: ObservableObject {
     }
 
     func uploadFile(at url: URL, to provider: CloudProvider) async {
-        guard !isUploading else { return }
+        guard FeatureAvailability.cloud, !isUploading else { return }
         isUploading = true; uploadFraction = 0; retryData = nil
         uploadTask = Task {
             defer { isUploading = false }
@@ -660,6 +666,7 @@ final class AppModel: ObservableObject {
     }
 
     func uploadPayload(_ data: Data, fileExtension: String, to provider: CloudProvider) async throws {
+        guard FeatureAvailability.cloud else { throw CocoaError(.featureUnsupported) }
         let filename = "iSnap-\(UUID().uuidString).\(fileExtension)"
         statusText = String(localized: "Uploading…")
         let progress = UploadProgressDelegate { [weak self] value in
@@ -687,7 +694,8 @@ final class AppModel: ObservableObject {
     }
 
     func isAvailable(_ provider: CloudProvider) -> Bool {
-        switch provider {
+        guard FeatureAvailability.cloud else { return false }
+        return switch provider {
         case .r2: r2Connected
         case .googleDrive: googleDriveConnected
         case .docVault: docVaultConnected && !settings.value.cloud.docVault.workspaceID.isEmpty
@@ -706,7 +714,8 @@ final class AppModel: ObservableObject {
 
     /// The Share menu for a file on disk.
     func shareMenu(for url: URL) -> NSMenu {
-        let uploads = CloudProvider.allCases.map { provider in
+        let providers = FeatureAvailability.cloud ? CloudProvider.allCases : []
+        let uploads = providers.map { provider in
             ShareService.UploadTarget(title: title(of: provider), isAvailable: isAvailable(provider) && !isUploading) { [weak self] in
                 Task { await self?.uploadFile(at: url, to: provider) }
             }

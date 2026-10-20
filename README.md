@@ -12,13 +12,13 @@
   <sub>▶ <a href="docs/assets/isnap-introduce.mp4">Watch the full 40-second introduction with sound</a> · <a href="docs/USER_GUIDE.md">User guide</a></sub>
 </p>
 
-iSnap is written in Swift with SwiftUI, AppKit, and ScreenCaptureKit. No web view, no JavaScript runtime, and nothing leaves your Mac unless you choose to upload it.
+iSnap is written in Swift with SwiftUI, AppKit, and ScreenCaptureKit. No web view, no JavaScript runtime, and screenshots are processed on your Mac. Sharing uses the macOS services you choose.
 
 ## Highlights
 
 ### Capture the screen you are looking at
 
-`⌃⌥1` captures the display under the pointer, `⌃⌥2` drags a region on any display, `⌃⌥3` picks an application window, and **All Displays** stitches every screen into one image. Captures open in the editor and are archived to your Library automatically. Region capture includes a pixel loupe, output dimensions and Space-drag repositioning; releasing the mouse captures immediately. Configurable workflows apply a preset/watermark and save, copy or explicitly opt into uploading with one shortcut.
+`⌃⌥1` captures the display under the pointer, `⌃⌥2` drags a region on any display, `⌃⌥3` picks an application window, and **All Displays** stitches every screen into one image. Captures open in the editor and are archived to your Library automatically. Region capture includes a pixel loupe, output dimensions and Space-drag repositioning; releasing the mouse captures immediately. Configurable workflows apply a preset/watermark, save and copy with one shortcut.
 
 ### Annotate and beautify
 
@@ -26,7 +26,7 @@ Rectangles, ellipses, arrows (straight or curved), lines, text, numbered or lett
 
 <p align="center"><img src="docs/assets/screenshots/editor.png" width="820" alt="The iSnap editor with arrows, numbered markers, a sticker, and a gradient frame"></p>
 
-Select OCR regions to copy text or infer CSV columns. Combine saved images horizontally/vertically with captions, or export a multipage PDF. Export/upload work runs in the background with cancellation, upload retry and local link history. Autosaved drafts share image assets and keep a previous recovery snapshot; exported `.isnap` projects remain portable.
+Select OCR regions to copy text or infer CSV columns. Combine saved images horizontally/vertically with captions, or export a multipage PDF. Export work runs in the background with cancellation. Autosaved drafts share image assets and keep a previous recovery snapshot; exported `.isnap` projects remain portable.
 
 ### The Capture Line
 
@@ -36,7 +36,9 @@ Every capture flies up and hangs on a line tucked under the menu bar, including 
 
 ### Share anywhere
 
-One Share menu on Capture Line cards, in the editor, and in the Library: AirDrop, Messages, Mail, every macOS share extension, **Open With** any app, copy the image, the file, or its path, or upload to Cloudflare R2, Google Drive, or DocVault and copy the link.
+One Share menu on Capture Line cards, in the editor, and in the Library: AirDrop, Messages, Mail, every macOS share extension, **Open With** any app, copy the image, the file, or its path.
+
+Integrated cloud services are [in the backlog](docs/BACKLOG.md#cloud-integrations) and are unavailable starting with v1.0.4.
 
 ### And more
 
@@ -69,7 +71,7 @@ One Share menu on Capture Line cards, in the editor, and in the Library: AirDrop
 
 Download the `.dmg` (or the `.zip`) from the [latest release](https://github.com/Vhaooforjob/isnap/releases/latest).
 
-See [what changed in 1.0.3 compared with 1.0.2](docs/releases/v1.0.3.md), including layers and snapping, precise region capture, background export, interactive OCR, image composition and capture workflows.
+See [what changed in 1.0.4 compared with 1.0.3](docs/releases/v1.0.4.md): a compact, resizable inspector, empty Library layout fixes, quicker Library access, and cloud integrations moved to backlog.
 
 **Requirements:** macOS 14 Sonoma or later, Apple Silicon or Intel.
 

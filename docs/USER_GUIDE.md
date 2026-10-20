@@ -9,7 +9,6 @@ iSnap lives in your menu bar (the viewfinder icon) and in a main window with an 
 - [Sharing](#sharing)
 - [Library and widgets](#library-and-widgets)
 - [Text extraction](#text-extraction)
-- [Cloud uploads](#cloud-uploads)
 - [Settings](#settings)
 - [Storage and cache](#storage-and-cache)
 - [Language](#language)
@@ -51,7 +50,7 @@ The **timer menu** in the capture toolbar adds **Capture Last Region**, a **3/5/
 
 Open **timer menu → Workflows → Manage Workflows…**. Give each workflow a name and a unique shortcut with modifiers (for example `⌃⌥9`), choose region or screen capture, an optional saved canvas preset and watermark text, and whether to save and/or copy. **Save Workflow** or **Save All** applies changes, including removals. The menu can also run a workflow. Conflicting shortcuts are reported in the manager.
 
-Upload defaults to **Off**. Selecting a provider explicitly enables upload for every run of that workflow; the provider must be connected (with a workspace selected for DocVault). The workflow captures, applies its style, saves/copies as configured, opens the editable source and uploads if enabled. The uploaded link replaces the image on the clipboard. **Stop Workflow** cancels remaining work; files already saved are kept. Region workflows also capture immediately on mouse release.
+The workflow captures, applies its style, saves/copies as configured and opens the editable source. **Stop Workflow** cancels remaining work; files already saved are kept. Region workflows also capture immediately on mouse release. Cloud actions are unavailable; older workflows with a saved upload destination still perform their local actions without uploading or replacing the clipboard with a link.
 
 ### Scrolling capture
 
@@ -139,7 +138,7 @@ The panel on the right styles the exported image:
 
 Format (PNG or JPEG), JPEG quality, whether the canvas background is included, and copying after a quick save are set in **Settings → Export**.
 
-Rendering and encoding exports, clipboard images and upload images run in the background. The status bar offers **Cancel Export**, upload progress, **Cancel Upload** and **Retry Upload** after a failed/cancelled upload. Retry uses the rendered image retained for that attempt. **… → Upload History…** keeps the latest 100 successful links with provider/date and copy/open actions. Clearing history removes local links, not remote files. Cancellation is cooperative; files already written and uploads already accepted by a provider can remain.
+Rendering and encoding exports and clipboard images run in the background. The status bar offers **Cancel Export**. Cancellation is cooperative; files already written are kept.
 
 ### Extract text and tables
 
@@ -200,7 +199,6 @@ The same Share menu is available on Capture Line cards, in the editor toolbar an
 | More Sharing Options | Every macOS share extension (Notes, Photos, Freeform, …) |
 | Open With › | Any app that opens images, default app first; **Other…** picks any app |
 | Copy Image · Copy File · Copy Path | Paste the picture, attach the file (chat apps, Mail, Finder), or paste its path |
-| Upload and Copy Link › | Cloudflare R2, Google Drive, or DocVault (connected services only); the link is copied |
 | Show in Finder | Reveal the file |
 
 ## Library and widgets
@@ -229,15 +227,7 @@ Add the **Recent Screenshots** widget (small or medium) from the macOS widget ga
 
 <p align="center"><img src="assets/screenshots/ocr.png" width="420" alt="Extracted text"></p>
 
-## Cloud uploads
-
-Configure services in **Settings → Cloud**. Credentials and tokens are stored in the macOS Keychain.
-
-- **Cloudflare R2:** Account ID, Bucket, Public URL, optional Directory, Access Key ID, and Secret Access Key. **Save & Test** checks the connection.
-- **Google Drive:** create a Desktop OAuth client that can use the loopback redirect `http://127.0.0.1:8089/callback`, enter its Client ID and Secret, then **Connect**. An optional Folder ID chooses the destination.
-- **DocVault:** set the API server and web app, **Connect** to sign in, then choose the upload workspace and the Google Drive account linked in DocVault. Capacity refreshes after uploads.
-
-Upload from the editor status bar (**Upload**) or from any Share menu (**Upload and Copy Link**).
+Cloud integrations are [in the backlog](BACKLOG.md#cloud-integrations), not an available feature starting with v1.0.4. Cloud settings, uploads, link history and workflow upload choices are hidden. Existing cloud configuration is retained but inactive.
 
 ## Settings
 
@@ -252,7 +242,6 @@ Open **Settings…** from the menu bar, the editor's gear button, or `⌘,`. Set
 | Storage | Sizes, Clear Cache, Capture Line cleanup |
 | Export | Format, JPEG quality, canvas background, copy after quick save |
 | Updates | Check on launch, check now |
-| Cloud | Cloudflare R2, Google Drive, DocVault |
 
 <p align="center"><img src="assets/screenshots/settings-line.png" width="560" alt="Capture Line settings"></p>
 

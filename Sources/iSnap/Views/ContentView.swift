@@ -9,21 +9,13 @@ struct ContentView: View {
             QuickAccessBar()
             if model.section == .editor {
                 AnnotationToolbar(document: model.document)
-                HSplitView {
-                    EditorCanvasHost(document: model.document)
-                        .frame(minWidth: 560, minHeight: 420)
-                    VStack(spacing: 0) {
-                        LayersPanel(document: model.document)
-                        Divider()
-                        CanvasSettingsPanel(document: model.document, settings: model.settings)
-                    }.frame(minWidth: 280, idealWidth: 300).background(Color(nsColor: .windowBackgroundColor))
-                }
+                EditorWorkspace(model: model).frame(minHeight: 420)
             } else {
                 LibraryView()
             }
             statusBar
         }
-        .frame(minWidth: 940, minHeight: 680)
+        .frame(minWidth: 940, maxWidth: .infinity, minHeight: 680, maxHeight: .infinity, alignment: .top)
         .task { await model.reloadLibrary() }
         .sheet(isPresented: $model.isShowingWindowPicker) {
             WindowPickerView().environmentObject(model)
@@ -38,7 +30,10 @@ struct ContentView: View {
         .sheet(isPresented: $model.isShowingDrafts) {
             DraftsView().environmentObject(model)
         }
-        .sheet(isPresented: $model.isShowingUploadHistory) {
+        .sheet(isPresented: Binding(
+            get: { FeatureAvailability.cloud && model.isShowingUploadHistory },
+            set: { model.isShowingUploadHistory = $0 }
+        )) {
             UploadHistoryView().environmentObject(model)
         }
         .sheet(isPresented: $model.isShowingComposition) {
@@ -85,10 +80,10 @@ struct ContentView: View {
                 ProgressView().controlSize(.mini)
                 Button("Cancel Export") { model.exportTask?.cancel() }
             }
-            if model.isUploading {
+            if FeatureAvailability.cloud && model.isUploading {
                 ProgressView(value: model.uploadFraction).frame(width: 55)
                 Button("Cancel Upload", action: model.cancelUpload)
-            } else if model.retryData != nil {
+            } else if FeatureAvailability.cloud && model.retryData != nil {
                 Button("Retry Upload", action: model.retryUpload)
             }
             Spacer()
@@ -96,17 +91,19 @@ struct ContentView: View {
                 Button("Copy", systemImage: "doc.on.doc", action: model.copy)
                 Button("Share", systemImage: "square.and.arrow.up", action: model.shareEditedImage)
                 Button("Quick Save", systemImage: "bolt", action: model.quickSave)
-                Menu {
-                    Button("Cloudflare R2") { Task { await model.upload(to: .r2) } }
-                        .disabled(!model.r2Connected)
-                    Button("Google Drive") { Task { await model.upload(to: .googleDrive) } }
-                        .disabled(!model.googleDriveConnected)
-                    Button("DocVault") { Task { await model.upload(to: .docVault) } }
-                        .disabled(!model.docVaultConnected || model.settings.value.cloud.docVault.workspaceID.isEmpty)
-                } label: {
-                    Label(model.isUploading ? "Uploading…" : "Upload", systemImage: "icloud.and.arrow.up")
+                if FeatureAvailability.cloud {
+                    Menu {
+                        Button("Cloudflare R2") { Task { await model.upload(to: .r2) } }
+                            .disabled(!model.r2Connected)
+                        Button("Google Drive") { Task { await model.upload(to: .googleDrive) } }
+                            .disabled(!model.googleDriveConnected)
+                        Button("DocVault") { Task { await model.upload(to: .docVault) } }
+                            .disabled(!model.docVaultConnected || model.settings.value.cloud.docVault.workspaceID.isEmpty)
+                    } label: {
+                        Label(model.isUploading ? "Uploading…" : "Upload", systemImage: "icloud.and.arrow.up")
+                    }
+                    .disabled(model.isUploading || !AppModel.CloudProvider.allCases.contains(where: model.isAvailable))
                 }
-                .disabled(model.isUploading || !AppModel.CloudProvider.allCases.contains(where: model.isAvailable))
                 Button("Export…", systemImage: "square.and.arrow.down.on.square", action: model.saveAs)
             }
         }
@@ -115,6 +112,56 @@ struct ContentView: View {
         .padding(.horizontal, 12)
         .frame(height: 30)
         .background(.bar)
+    }
+}
+
+private struct EditorWorkspace: NSViewControllerRepresentable {
+    let model: AppModel
+
+    func makeNSViewController(context: Context) -> EditorWorkspaceController {
+        EditorWorkspaceController(model: model)
+    }
+
+    func updateNSViewController(_ controller: EditorWorkspaceController, context: Context) {}
+}
+
+private final class EditorWorkspaceController: NSSplitViewController {
+    private var hasInitialWidth = false
+    private let inspectorWidth: CGFloat = 280
+
+    init(model: AppModel) {
+        super.init(nibName: nil, bundle: nil)
+        splitView.identifier = NSUserInterfaceItemIdentifier("iSnap.editorSplit")
+        splitView.isVertical = true
+        splitView.dividerStyle = .thin
+        let canvas = NSSplitViewItem(viewController: NSHostingController(rootView:
+            EditorCanvasHost(document: model.document)))
+        canvas.minimumThickness = 560
+        let inspector = NSSplitViewItem(viewController: NSHostingController(rootView:
+            VStack(spacing: 0) {
+                LayersPanel(document: model.document)
+                Divider()
+                CanvasSettingsPanel(document: model.document, settings: model.settings)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(nsColor: .windowBackgroundColor))
+            .environmentObject(model)))
+        inspector.minimumThickness = inspectorWidth
+        // Window resizing gives extra space to the canvas; divider dragging
+        // can still make the inspector as wide as the user wants.
+        inspector.holdingPriority = NSLayoutConstraint.Priority(rawValue: 251)
+        addSplitViewItem(canvas)
+        addSplitViewItem(inspector)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        guard !hasInitialWidth, view.window != nil,
+              splitView.bounds.width >= 560 + inspectorWidth + splitView.dividerThickness else { return }
+        hasInitialWidth = true
+        splitView.setPosition(splitView.bounds.width - inspectorWidth - splitView.dividerThickness, ofDividerAt: 0)
     }
 }
 

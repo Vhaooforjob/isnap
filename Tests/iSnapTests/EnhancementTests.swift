@@ -4,6 +4,69 @@ import SwiftUI
 @testable import iSnap
 
 final class EnhancementTests: XCTestCase {
+    func testLegacyWorkflowCloudChoiceIsPreservedButInactive() throws {
+        for provider in AppModel.CloudProvider.allCases {
+            var workflow = CaptureWorkflow()
+            workflow.uploadProvider = provider
+            let data = try JSONEncoder().encode(workflow)
+            let restored = try JSONDecoder().decode(CaptureWorkflow.self, from: data)
+            XCTAssertEqual(restored.uploadProvider, provider)
+            XCTAssertNil(restored.activeUploadProvider)
+            XCTAssertTrue(restored.saves)
+            XCTAssertTrue(restored.copies)
+        }
+    }
+
+    @MainActor
+    func testCloudBacklogHidesRoutesAndBlocksUploadsEvenWithSavedConnectionState() async throws {
+        _ = NSApplication.shared
+        XCTAssertFalse(SettingsView.Tab.availableCases.contains(.cloud))
+        XCTAssertTrue(SettingsView.Tab.availableCases.contains(.export))
+        let directory = try folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let suite = "iSnapCloudBacklog-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let model = AppModel(
+            settings: SettingsStore(fileURL: directory.appendingPathComponent("settings.json"), userDefaults: defaults),
+            captureLine: CaptureLine(ownedFolder: directory.appendingPathComponent("Line"), defaults: defaults),
+            connectsServices: false, features: WorkspaceFeatures(url: directory.appendingPathComponent("workspace.json")))
+        model.r2Connected = true
+        model.googleDriveConnected = true
+        model.docVaultConnected = true
+        model.settings.value.cloud.docVault.workspaceID = "previous-workspace"
+        let status = model.statusText
+        for provider in AppModel.CloudProvider.allCases {
+            XCTAssertFalse(model.isAvailable(provider))
+            // Return before rendering, reading files or reaching a provider.
+            await model.upload(to: provider)
+            await model.uploadFile(at: directory.appendingPathComponent("missing.png"), to: provider)
+            await model.startUpload(data: Data(), fileExtension: "png", provider: provider)
+            do {
+                try await model.uploadPayload(Data(), fileExtension: "png", to: provider)
+                XCTFail("Cloud payload uploads must be blocked")
+            } catch {
+                XCTAssertEqual((error as? CocoaError)?.code, .featureUnsupported)
+            }
+        }
+        await model.refreshDocVault()
+        model.retryData = (Data(), "png", .r2)
+        model.retryUpload()
+        await Task.yield()
+        XCTAssertNil(model.uploadTask)
+        XCTAssertFalse(model.isUploading)
+        XCTAssertNil(model.errorMessage)
+        XCTAssertEqual(model.statusText, status)
+        XCTAssertTrue(model.uploadHistory.isEmpty)
+        XCTAssertNotNil(model.retryData)
+        let file = directory.appendingPathComponent("capture.png")
+        try ProjectStore.png(image()).write(to: file)
+        let menu = model.shareMenu(for: file)
+        XCTAssertNil(menu.items.first { $0.title == String(localized: "Upload and Copy Link") })
+        XCTAssertNotNil(menu.items.first { $0.title == String(localized: "Copy File") })
+        XCTAssertNotNil(menu.items.first { $0.title == String(localized: "More Sharing Options") })
+    }
+
     private func image(width: Int = 400, height: Int = 200) throws -> NSImage {
         let context = try XCTUnwrap(CGContext(data: nil, width: width, height: height, bitsPerComponent: 8,
             bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
@@ -260,6 +323,22 @@ final class EnhancementTests: XCTestCase {
         await model.reloadLibrary()
         try await render(ContentView().environmentObject(model), to: output.appendingPathComponent("editor.png"),
             size: CGSize(width: 940, height: 680))
+        try await render(ContentView().environmentObject(model), to: output.appendingPathComponent("editor-wide-inspector.png"),
+            size: CGSize(width: 1200, height: 820), configure: { host in
+                @MainActor func editorSplit(in view: NSView) -> NSSplitView? {
+                    if let split = view as? NSSplitView, split.identifier?.rawValue == "iSnap.editorSplit" { return split }
+                    for child in view.subviews {
+                        if let split = editorSplit(in: child) { return split }
+                    }
+                    return nil
+                }
+                let split = try XCTUnwrap(editorSplit(in: host))
+                XCTAssertEqual(try XCTUnwrap(split.arrangedSubviews.last).frame.width, 280, accuracy: 2)
+                split.setPosition(split.bounds.width - 420 - split.dividerThickness, ofDividerAt: 0)
+                split.adjustSubviews()
+                split.layoutSubtreeIfNeeded()
+                XCTAssertEqual(try XCTUnwrap(split.arrangedSubviews.last).frame.width, 420, accuracy: 2)
+            })
         try await render(CompositionView(pages: [CompositionPage(url: library.appendingPathComponent("Bug report.png"), caption: "Report")]).environmentObject(model),
             to: output.appendingPathComponent("composition.png"), size: CGSize(width: 800, height: 520))
         model.features.state.workflows = [CaptureWorkflow()]
@@ -274,10 +353,22 @@ final class EnhancementTests: XCTestCase {
             size: CGSize(width: 940, height: 680))
         try await render(DraftsView(directory: drafts).environmentObject(model), to: output.appendingPathComponent("drafts.png"),
             size: CGSize(width: 720, height: 520))
+        let emptyLibrary = directory.appendingPathComponent("Empty Library")
+        model.settingsTab = .cloud
+        try await render(SettingsView(store: settings).environmentObject(model),
+            to: output.appendingPathComponent("settings.png"), size: CGSize(width: 740, height: 560))
+        XCTAssertEqual(model.settingsTab, .hotkeys)
+        try FileManager.default.createDirectory(at: emptyLibrary, withIntermediateDirectories: true)
+        model.settings.value.quickSave.folder = emptyLibrary
+        await model.reloadLibrary()
+        try await render(ContentView().environmentObject(model), to: output.appendingPathComponent("library-empty-compact.png"),
+            size: CGSize(width: 940, height: 680))
+        try await render(ContentView().environmentObject(model), to: output.appendingPathComponent("library-empty-large.png"),
+            size: CGSize(width: 1200, height: 820))
     }
 
     @MainActor
-    private func render<V: View>(_ view: V, to url: URL, size: CGSize) async throws {
+    private func render<V: View>(_ view: V, to url: URL, size: CGSize, configure: (@MainActor (NSView) throws -> Void)? = nil) async throws {
         let host = NSHostingView(rootView: view.frame(width: size.width, height: size.height).background(Color(nsColor: .windowBackgroundColor)))
         host.frame = CGRect(origin: .zero, size: size)
         let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
@@ -288,6 +379,11 @@ final class EnhancementTests: XCTestCase {
         defer { window.orderOut(nil) }
         try await Task.sleep(for: .seconds(1))
         host.layoutSubtreeIfNeeded()
+        try configure?(host)
+        if configure != nil {
+            try await Task.sleep(for: .milliseconds(150))
+            host.layoutSubtreeIfNeeded()
+        }
         host.display()
         let rep = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
         host.cacheDisplay(in: host.bounds, to: rep)

@@ -30,14 +30,16 @@ struct WorkflowsView: View {
                         TextField("Watermark text (optional)", text: $workflows[index].watermark)
                         Toggle("Save to Library", isOn: $workflows[index].saves)
                         Toggle("Copy image", isOn: $workflows[index].copies)
-                        Picker("Upload after capture", selection: $workflows[index].uploadProvider) {
-                            Text("Off").tag(Optional<AppModel.CloudProvider>.none)
-                            Text("Cloudflare R2").tag(Optional(AppModel.CloudProvider.r2))
-                            Text("Google Drive").tag(Optional(AppModel.CloudProvider.googleDrive))
-                            Text("DocVault").tag(Optional(AppModel.CloudProvider.docVault))
+                        if FeatureAvailability.cloud {
+                            Picker("Upload after capture", selection: $workflows[index].uploadProvider) {
+                                Text("Off").tag(Optional<AppModel.CloudProvider>.none)
+                                Text("Cloudflare R2").tag(Optional(AppModel.CloudProvider.r2))
+                                Text("Google Drive").tag(Optional(AppModel.CloudProvider.googleDrive))
+                                Text("DocVault").tag(Optional(AppModel.CloudProvider.docVault))
+                            }
+                            Text("An enabled upload sends each workflow capture to the selected connected provider and copies its link.")
+                                .font(.caption).foregroundStyle(.secondary)
                         }
-                        Text("An enabled upload sends each workflow capture to the selected connected provider and copies its link.")
-                            .font(.caption).foregroundStyle(.secondary)
                         HStack {
                             Button("Remove", role: .destructive) { workflows.remove(at: index); selected = workflows.first?.id }
                             Spacer()

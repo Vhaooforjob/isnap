@@ -52,12 +52,12 @@ extension AppModel {
 
     func cancelUpload() { uploadTask?.cancel() }
     func retryUpload() {
-        guard !isUploading, let retryData else { return }
+        guard FeatureAvailability.cloud, !isUploading, let retryData else { return }
         Task { await startUpload(data: retryData.data, fileExtension: retryData.ext, provider: retryData.provider) }
     }
 
     func startUpload(data: Data, fileExtension: String, provider: CloudProvider) async {
-        guard !isUploading else { return }
+        guard FeatureAvailability.cloud, !isUploading else { return }
         isUploading = true; uploadFraction = 0
         retryData = (data, fileExtension, provider)
         uploadTask = Task {

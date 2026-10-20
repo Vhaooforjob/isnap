@@ -50,7 +50,9 @@ struct CaptureToolbar: View {
             Menu {
                 Button("Save Project…", action: model.saveProject).disabled(model.document.image == nil)
                 Button("Open Project…", action: model.openProject)
-                Button("Upload History…") { model.isShowingUploadHistory = true }
+                if FeatureAvailability.cloud {
+                    Button("Upload History…") { model.isShowingUploadHistory = true }
+                }
                 Button("Combine Images / PDF…") { model.compositionPages = []; model.isShowingComposition = true }
                 Menu("Recent Drafts") {
                     Button("Manage Drafts…") { model.isShowingDrafts = true }

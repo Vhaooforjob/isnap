@@ -1,6 +1,11 @@
 import AppKit
 import Foundation
 
+/// Product availability, not a user preference. Cloud integrations remain in backlog.
+enum FeatureAvailability {
+    static let cloud = false
+}
+
 enum CaptureMode: String, CaseIterable, Identifiable, Codable {
     /// The display under the pointer.
     case fullScreen

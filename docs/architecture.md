@@ -12,8 +12,6 @@ SwiftUI App / NSStatusItem / Commands
  ExportRenderer  ├─ ExportService (CoreGraphics/AppKit)
                  ├─ LibraryService (FileManager)
                  ├─ GlobalHotkeyService (Carbon)
-                 ├─ Cloud uploaders (CryptoKit/URLSession/Network)
-                 ├─ KeychainStore (Security)
                  ├─ UpdateService (URLSession)
                  └─ CaptureLineController (AppKit panel)
                       ├─ CaptureLine (model) + CaptureLineView / CaptureLineFlight
@@ -45,14 +43,18 @@ Localization uses `Sources/iSnap/Resources/Localizable.xcstrings` (English sourc
 
 Display capture matches `SCDisplay` and `NSScreen` by display ID, never by frame: ScreenCaptureKit frames use a top-left origin and AppKit frames a bottom-left one, so frames only agree on the main display.
 
-`ShareService` builds one Share menu for any file (direct AirDrop/Messages/Mail services, the system share extensions via `NSSharingServicePicker.standardShareMenuItem`, Open With, copy variants, and upload targets supplied by `AppModel`). The editor renders to `~/Library/Caches/<bundle id>/Share` first; prepared files older than an hour are removed on the next share. `StorageService` measures iSnap's folders off the main thread and clears only rebuildable data (URL cache, Vision model cache, share files, widget thumbnails).
+`ShareService` builds one Share menu for any file (direct AirDrop/Messages/Mail services, the system share extensions via `NSSharingServicePicker.standardShareMenuItem`, Open With, copy variants; `AppModel` supplies no cloud upload targets while cloud is in backlog). The editor renders to `~/Library/Caches/<bundle id>/Share` first; prepared files older than an hour are removed on the next share. `StorageService` measures iSnap's folders off the main thread and clears only rebuildable data (URL cache, Vision model cache, share files, widget thumbnails).
 
 ## Background export, workflows and composition
 
-`BackgroundExportService` renders immutable CGImage/value snapshots and encodes/writes output on its actor. The main actor owns clipboard/menu/UI work; completion marks a document saved only when its source identity and revision still match. Upload provider methods accept a task delegate for byte progress. AppModel retains retry bytes and a bounded local link history; cancellation propagates to the active URLSession task. History write failures do not turn successful remote uploads into retryable failures.
+`BackgroundExportService` renders immutable CGImage/value snapshots and encodes/writes output on its actor. The main actor owns clipboard/menu/UI work; completion marks a document saved only when its source identity and revision still match.
 
-`CaptureWorkflow` lives in the workspace state with upload disabled by default. A dedicated global-hotkey service registers unique action IDs and reports conflicts. Workflows preflight presets/provider state, capture region/screen, render a preset/watermark, save/copy and optionally upload. Region overlays have a frozen loupe source, pixel-aligned bounds and Space-drag translation, with immediate completion on mouse release.
+`CaptureWorkflow` lives in the workspace state. Legacy `uploadProvider` values remain serializable, but `activeUploadProvider` is nil while cloud is unavailable. A dedicated global-hotkey service registers unique action IDs and reports conflicts. Workflows preflight presets, capture region/screen, render a preset/watermark, and save/copy. Region overlays have a frozen loupe source, pixel-aligned bounds and Space-drag translation, with immediate completion on mouse release.
 
 `OCRLayout` groups Vision boxes into rows and infers CSV columns from x positions, with quoted cell escaping. The OCR viewer uses the rendered source (with masks), presents selectable boxes and copies layout-aware text. `CompositionService` reads images serially at bounded resolution, combines horizontal/vertical layouts and CoreText captions, or writes a multipage PDF with a per-page image cap of 4096 pixels.
 
 Draft manifests use optional asset references, storing image bytes by SHA-256 in `.Assets`; legacy embedded projects still decode. `ProjectStore.read` hydrates and verifies assets. Portable project saves embed those bytes. A shared recursive lock serializes manifest writes, recovery rotation and asset collection. Trash first materializes a portable draft. Collection scans all remaining manifests, including recovery, and aborts on corruption. `recover` validates the source and falls back to Previous. `DraftCatalog` caches rendered thumbnails by path, modification time and file size.
+
+## Cloud backlog
+
+`FeatureAvailability.cloud` is a source-controlled constant set to false, with no user preference to enable it. Cloud UI and upload history are hidden; startup connection checks, settings credential reads/polling, authentication, account updates and uploads are blocked at AppModel entry points. Existing workflows run local actions only. Provider code, serialized configuration, Keychain credentials and link history remain dormant for compatibility; this is not an available product feature. See [backlog](BACKLOG.md#cloud-integrations). macOS sharing services and update checks remain available.

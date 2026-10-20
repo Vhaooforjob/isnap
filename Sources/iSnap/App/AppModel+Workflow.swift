@@ -13,7 +13,7 @@ extension AppModel {
                 windows.forEach { $0.orderFront(nil) }
             }
             do {
-                if let provider = workflow.uploadProvider, !isAvailable(provider) { throw WorkflowError.unavailableProvider }
+                if let provider = workflow.activeUploadProvider, !isAvailable(provider) { throw WorkflowError.unavailableProvider }
                 var canvas = CanvasConfiguration(); canvas.cornerRadius = 0; canvas.shadowSize = 0
                 if let id = workflow.presetID {
                     guard let preset = features.state.presets.first(where: { $0.id == id }) else { throw WorkflowError.missingPreset }
@@ -55,7 +55,7 @@ extension AppModel {
                 }
                 guard loadIntoEditor(result) else { return }
                 document.updateCanvas { $0 = canvas }
-                if let provider = workflow.uploadProvider {
+                if let provider = workflow.activeUploadProvider {
                     try Task.checkCancellation()
                     await startUpload(data: output.data, fileExtension: preferences.export.defaultFormat.fileExtension, provider: provider)
                 } else { statusText = String(localized: "Workflow completed") }

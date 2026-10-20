@@ -90,6 +90,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         item.button?.image = NSImage(systemSymbolName: "camera.viewfinder", accessibilityDescription: "iSnap")
         let menu = NSMenu()
         menu.addItem(withTitle: String(localized: "Show iSnap"), action: #selector(showCaptureLine), keyEquivalent: "")
+        menu.addItem(withTitle: String(localized: "Screenshot Library"), action: #selector(showLibrary), keyEquivalent: "")
         menu.addItem(.separator())
         screenMenuItem = menu.addItem(withTitle: String(localized: "Capture Screen"), action: #selector(captureScreen), keyEquivalent: "")
         regionMenuItem = menu.addItem(withTitle: String(localized: "Capture Region"), action: #selector(captureRegion), keyEquivalent: "")
@@ -111,7 +112,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         lineItem.submenu = lineMenu
         menu.addItem(lineItem)
         menu.addItem(.separator())
-        menu.addItem(withTitle: String(localized: "Screenshot Library"), action: #selector(showLibrary), keyEquivalent: "")
         menu.addItem(withTitle: String(localized: "Settings…"), action: #selector(showSettings), keyEquivalent: ",")
         let languageItem = NSMenuItem(title: String(localized: "Language"), action: nil, keyEquivalent: "")
         let languageMenu = NSMenu()
@@ -170,7 +170,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     func windowWillClose(_ notification: Notification) {
         guard let window = notification.object as? NSWindow, window === settingsPanel else { return }
         model?.isShowingSettings = false
-        // Release the view so cloud refresh tasks stop and credentials are reloaded next time.
+        // Release the view so settings tasks stop when the popup closes.
         settingsPanel?.contentView = nil
     }
 

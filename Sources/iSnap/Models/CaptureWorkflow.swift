@@ -11,6 +11,11 @@ struct CaptureWorkflow: Codable, Identifiable, Equatable {
     var copies = true
     var uploadProvider: AppModel.CloudProvider?
 
+    /// Preserve legacy configuration while running only currently available actions.
+    var activeUploadProvider: AppModel.CloudProvider? {
+        FeatureAvailability.cloud ? uploadProvider : nil
+    }
+
     @MainActor static func isValid(_ workflows: [CaptureWorkflow]) -> Bool {
         var keys: Set<String> = []
         return workflows.allSatisfy {

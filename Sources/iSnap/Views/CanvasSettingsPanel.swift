@@ -160,7 +160,7 @@ struct CanvasSettingsPanel: View {
             }
         }
         .formStyle(.grouped)
-        .frame(minWidth: 245, idealWidth: 270, maxWidth: 300)
+        .frame(minWidth: 245, maxWidth: .infinity)
     }
 
     private func binding<T>(_ keyPath: WritableKeyPath<CanvasConfiguration, T>) -> Binding<T> {

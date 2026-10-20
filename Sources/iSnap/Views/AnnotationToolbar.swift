@@ -172,7 +172,7 @@ struct AnnotationToolbar: View {
             if compact { Image(systemName: "square.and.arrow.up") } else { Label("Share", systemImage: "square.and.arrow.up") }
         }
         .disabled(document.image == nil)
-        .help("Share with AirDrop, Messages, Mail, another app, or a cloud link")
+        .help("Share with AirDrop, Messages, Mail, or another app")
         Button(action: model.quickSave) {
             if compact { Image(systemName: "square.and.arrow.down") } else { Label("Save", systemImage: "square.and.arrow.down") }
         }

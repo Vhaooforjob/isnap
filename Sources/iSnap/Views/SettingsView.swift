@@ -22,6 +22,9 @@ struct SettingsView: View {
         case export = "Export"
         case updates = "Updates"
         case cloud = "Cloud"
+        static var availableCases: [Tab] {
+            allCases.filter { $0 != .cloud || FeatureAvailability.cloud }
+        }
         var id: String { rawValue }
         var title: String {
             switch self {
@@ -51,7 +54,7 @@ struct SettingsView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            List(Tab.allCases, selection: $model.settingsTab) { item in
+            List(Tab.availableCases, selection: $model.settingsTab) { item in
                 Label(item.title, systemImage: item.symbol).tag(item)
             }
             .frame(width: 170)
@@ -65,7 +68,8 @@ struct SettingsView: View {
                     case .storage: storage
                     case .export: export
                     case .updates: updates
-                    case .cloud: cloud
+                    case .cloud:
+                        if FeatureAvailability.cloud { cloud } else { hotkeys }
                     }
                 }
                 .formStyle(.grouped)
@@ -99,13 +103,15 @@ struct SettingsView: View {
         }
         .onAppear {
             store.value.startup.launchAtLogin = LaunchAtLoginService.isEnabled
+            if !Tab.availableCases.contains(model.settingsTab) { model.settingsTab = .hotkeys }
+            guard FeatureAvailability.cloud else { return }
             r2AccessKey = KeychainStore.shared.value(for: .r2AccessKeyID) ?? ""
             r2SecretKey = KeychainStore.shared.value(for: .r2SecretAccessKey) ?? ""
             googleClientID = KeychainStore.shared.value(for: .googleClientID) ?? ""
             googleClientSecret = KeychainStore.shared.value(for: .googleClientSecret) ?? ""
         }
         .task(id: model.settingsTab) {
-            guard model.settingsTab == .cloud else { return }
+            guard FeatureAvailability.cloud, model.settingsTab == .cloud else { return }
             while !Task.isCancelled {
                 if model.docVaultConnected {
                     await model.refreshDocVault(showError: false)

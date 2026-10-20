@@ -5048,6 +5048,16 @@
         }
       }
     },
+    "Share with AirDrop, Messages, Mail, or another app": {
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chia sẻ qua AirDrop, Tin nhắn, Mail hoặc ứng dụng khác"
+          }
+        }
+      }
+    },
     "Share with AirDrop, Messages, Mail, another app, or a cloud link": {
       "localizations": {
         "vi": {

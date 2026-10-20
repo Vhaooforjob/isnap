@@ -78,6 +78,7 @@ struct LibraryView: View {
             if filtered.isEmpty {
                 ContentUnavailableView("No Matching Screenshots", systemImage: "photo.stack",
                     description: Text("Capture an image or adjust the search and filters."))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollViewReader { proxy in
                 ScrollView {
@@ -134,6 +135,7 @@ struct LibraryView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color(nsColor: .windowBackgroundColor))
         .task { await model.reloadLibrary() }
         .task(id: query) {
