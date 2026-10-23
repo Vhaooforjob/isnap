@@ -10,6 +10,21 @@ struct RedactionReviewView: View {
     @State private var busy = false
     @State private var error: String?
 
+    private func regionOverlay(_ region: RecognizedRegion, scale: CGFloat) -> some View {
+        let fill: Color = selected.contains(region.id) ? .black : Color.orange.opacity(0.25)
+        let width: CGFloat = max(2, (region.rect.width + 8) * scale)
+        let height: CGFloat = max(2, (region.rect.height + 8) * scale)
+        let x: CGFloat = (region.rect.minX - 4) * scale
+        let y: CGFloat = (region.rect.minY - 4) * scale
+        return Rectangle().fill(fill)
+            .overlay(Rectangle().stroke(.orange, lineWidth: 1))
+            .frame(width: width, height: height)
+            .offset(x: x, y: y)
+            .onTapGesture { toggle(region.id) }
+            .accessibilityLabel(region.text).accessibilityAddTraits(.isButton)
+            .accessibilityAction { toggle(region.id) }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Review Suggested Redactions").font(.title2.bold())
@@ -27,13 +42,7 @@ struct RedactionReviewView: View {
                         ZStack(alignment: .topLeading) {
                             Image(nsImage: image).resizable().frame(width: sourceSize.width * scale, height: sourceSize.height * scale)
                             ForEach(model.sensitiveRegions) { region in
-                                Rectangle().fill(selected.contains(region.id) ? Color.black : Color.orange.opacity(0.25))
-                                    .overlay(Rectangle().stroke(.orange, lineWidth: 1))
-                                    .frame(width: max(2, (region.rect.width + 8) * scale), height: max(2, (region.rect.height + 8) * scale))
-                                    .offset(x: (region.rect.minX - 4) * scale, y: (region.rect.minY - 4) * scale)
-                                    .onTapGesture { toggle(region.id) }
-                                    .accessibilityLabel(region.text).accessibilityAddTraits(.isButton)
-                                    .accessibilityAction { toggle(region.id) }
+                                regionOverlay(region, scale: scale)
                             }
                         }
                     }
