@@ -8,7 +8,7 @@ struct LibraryThumbnail: View {
     @State private var image: CGImage?
 
     private var loadID: String {
-        "\(item.url.path)|\(item.modifiedAt.timeIntervalSinceReferenceDate)|\(maxPixelSize)"
+        "\(item.url.path)|\(item.fileIdentity ?? "")|\(item.byteCount)|\(item.modifiedAt.timeIntervalSinceReferenceDate)|\(maxPixelSize)"
     }
 
     var body: some View {

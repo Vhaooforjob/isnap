@@ -15,6 +15,13 @@ final class ScrollCaptureController: NSObject, ObservableObject, NSWindowDelegat
     @Published var trimBottom = 0
     @Published var scrollBeforeCapture = false
     @Published var shortcutAvailable = false
+    @Published private(set) var automatic = false
+    @Published var direction = ScrollDirection.down
+    private var firstOriginal: CGImage?
+    private var hud: NSPanel?
+    @Published var settleDelay = 1.0
+    private var automaticTask: Task<Void, Never>?
+    private var automaticRun = UUID()
     private var panel: NSPanel?
     private var capture: (() async throws -> CGImage)?
     private var completion: ((NSImage?) -> Void)?
@@ -23,12 +30,20 @@ final class ScrollCaptureController: NSObject, ObservableObject, NSWindowDelegat
     private let hotkeys = GlobalHotkeyService(signature: 0x69534E53)
 
     func begin(first: CGImage, capture: @escaping () async throws -> CGImage,
-               scroll: (() async throws -> Void)? = nil, completion: @escaping (NSImage?) -> Void) {
+               scroll: (() async throws -> Void)? = nil, presentsPanel: Bool = true, completion: @escaping (NSImage?) -> Void) {
+        firstOriginal = first; direction = .down
         frames = [first]; overlaps = []; pending = nil; overlap = 0; message = ""; busy = false
         trimTop = 0; trimBottom = 0; scrollBeforeCapture = false; seamPreview = nil
         self.scroll = scroll
-        shortcutAvailable = hotkeys.registerScrollingCapture { [weak self] in self?.captureNext() }
-        self.capture = capture; self.completion = completion
+        if presentsPanel { shortcutAvailable = hotkeys.registerScrollingCapture { [weak self] in
+            guard let self else { return }
+            if automatic { pauseAutomatic() } else { captureNext() }
+        } }
+        self.capture = { [weak self] in
+            let image = try await capture()
+            return try (self?.direction ?? .down).orient(image)
+        }; self.completion = completion
+        if presentsPanel {
         let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 460, height: 800),
             styleMask: [.titled, .closable, .resizable, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.title = String(localized: "Scrolling Capture")
@@ -40,7 +55,103 @@ final class ScrollCaptureController: NSObject, ObservableObject, NSWindowDelegat
         panel.contentView = NSHostingView(rootView: ScrollCaptureView(controller: self))
         self.panel = panel
         panel.center(); panel.orderFrontRegardless()
+        }
         refreshPreview()
+    }
+
+    func changeDirection() {
+        guard frames.count == 1, pending == nil, !busy, let firstOriginal else { return }
+        do { frames = [try direction.orient(firstOriginal)]; trimTop = 0; trimBottom = 0; refreshPreview() }
+        catch { message = error.localizedDescription }
+    }
+
+    private func showHUD() {
+        guard panel != nil else { return }
+        let hud = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 72),
+            styleMask: [.titled, .nonactivatingPanel], backing: .buffered, defer: false)
+        hud.title = String(localized: "Scrolling Capture")
+        hud.level = .floating; hud.hidesOnDeactivate = false; hud.isReleasedWhenClosed = false
+        hud.contentView = NSHostingView(rootView: ScrollProgressView(controller: self))
+        if let screen = panel?.screen ?? NSScreen.main {
+            let visible = screen.visibleFrame
+            hud.setFrameOrigin(CGPoint(x: visible.maxX - hud.frame.width - 12, y: visible.maxY - hud.frame.height - 12))
+        }
+        hud.orderFrontRegardless(); self.hud = hud
+    }
+
+    func startAutomatic() {
+        guard !busy, pending == nil, let capture, let scroll else { return }
+        automatic = true; busy = true; message = ""
+        let run = UUID(); automaticRun = run
+        let delay = settleDelay.clamped(to: 0.5...3)
+        panel?.orderOut(nil)
+        showHUD()
+        automaticTask = Task {
+            defer {
+                if automaticRun == run {
+                    hud?.orderOut(nil); hud = nil
+                    automatic = false; busy = false
+                    panel?.orderFrontRegardless()
+                    refreshPreview()
+                }
+            }
+            do {
+                while frames.count < 50 {
+                    try Task.checkCancellation()
+                    guard let previous = frames.last else { return }
+                    // The progress panel is excluded from pixels, and must not intercept synthetic wheel events.
+                    hud?.ignoresMouseEvents = true
+                    do {
+                        defer { hud?.ignoresMouseEvents = false }
+                        try await scroll()
+                    }
+                    try await Task.sleep(for: .seconds(delay))
+                    var next = try await capture()
+                    var stable = false
+                    // Wait for scrolling/lazy-loaded content to settle before trusting a seam.
+                    for _ in 0..<4 {
+                        try await Task.sleep(for: .seconds(delay))
+                        let confirmation = try await capture()
+                        let a = try ScrollingStitcher.trim(next, top: trimTop, bottom: trimBottom)
+                        let b = try ScrollingStitcher.trim(confirmation, top: trimTop, bottom: trimBottom)
+                        stable = await Task.detached { ScrollingStitcher.unchanged(a, b) }.value
+                        next = confirmation
+                        if stable { break }
+                    }
+                    try Task.checkCancellation()
+                    guard automaticRun == run else { return }
+                    let before = try ScrollingStitcher.trim(previous, top: trimTop, bottom: trimBottom)
+                    let after = try ScrollingStitcher.trim(next, top: trimTop, bottom: trimBottom)
+                    let analysis = await Task.detached { (ScrollingStitcher.unchanged(before, after),
+                        ScrollingStitcher.automaticOverlap(previous: before, next: after)) }.value
+                    try Task.checkCancellation()
+                    guard automaticRun == run else { return }
+                    if stable && analysis.0 {
+                        message = String(localized: "Stopped: content is unchanged. Review the result, then Finish.")
+                        return
+                    }
+                    pending = next
+                    overlap = analysis.1 ?? after.height / 3
+                    guard stable, analysis.1 != nil else {
+                        message = String(localized: "Paused: moving content or an uncertain seam. Review this frame before continuing.")
+                        return
+                    }
+                    addPending()
+                    guard pending == nil else { return } // Size limit; keep the frame for review/discard.
+                }
+                message = String(localized: "Stopped at 50 frames. Review the result, then Finish.")
+            } catch is CancellationError { }
+            catch { if automaticRun == run { message = error.localizedDescription } }
+        }
+    }
+
+    func pauseAutomatic() {
+        guard automatic else { return }
+        automaticTask?.cancel(); automaticRun = UUID()
+        automatic = false; busy = false
+        hud?.orderOut(nil); hud = nil
+        message = String(localized: "Automatic capture paused. Review the result before continuing.")
+        panel?.orderFrontRegardless(); refreshPreview()
     }
 
     func captureNext() {
@@ -85,11 +196,14 @@ final class ScrollCaptureController: NSObject, ObservableObject, NSWindowDelegat
         let candidateFrames = frames + [pending]
         let candidateOverlaps = overlaps + [overlap]
         let totalHeight = candidateFrames.reduce(0) { $0 + $1.height - trimTop - trimBottom } - candidateOverlaps.reduce(0, +)
-        guard totalHeight <= 60_000, pending.width * totalHeight <= 80_000_000 else {
+        guard totalHeight <= 60_000, pending.width * totalHeight <= 80_000_000,
+              candidateFrames.count <= 50,
+              candidateFrames.reduce(0, { $0 + $1.width * $1.height }) <= 120_000_000 else {
             message = StitchError.tooLarge.localizedDescription; return
         }
         frames = candidateFrames; overlaps = candidateOverlaps
-        self.pending = nil; message = ""; refreshPreview()
+        self.pending = nil; message = ""
+        if !automatic { refreshPreview() }
     }
 
     func discardPending() { pending = nil; message = ""; refreshPreview() }
@@ -115,7 +229,8 @@ final class ScrollCaptureController: NSObject, ObservableObject, NSWindowDelegat
         }
         do {
             let image = try ScrollingStitcher.stitch(thumbnails, overlaps: allOverlaps.map { Int(Double($0) * scale) })
-            preview = NSImage(cgImage: image, size: CGSize(width: image.width, height: image.height))
+            let oriented = try direction.inverse.orient(image)
+            preview = NSImage(cgImage: oriented, size: CGSize(width: oriented.width, height: oriented.height))
             seamPreview = nil
             if pending != nil, allFrames.count >= 2 {
                 let seam = try ScrollingStitcher.seam(previous: allFrames[allFrames.count - 2], next: allFrames.last!, overlap: overlap)
@@ -127,11 +242,11 @@ final class ScrollCaptureController: NSObject, ObservableObject, NSWindowDelegat
     func finish() {
         guard !busy, pending == nil else { return }
         busy = true
-        let frames = frames, overlaps = overlaps, top = trimTop, bottom = trimBottom
+        let frames = frames, overlaps = overlaps, top = trimTop, bottom = trimBottom, direction = direction
         activeTask = Task {
             do {
                 let image = try await Task.detached(priority: .userInitiated) {
-                    try ScrollingStitcher.stitch(frames.map { try ScrollingStitcher.trim($0, top: top, bottom: bottom) }, overlaps: overlaps)
+                    try direction.inverse.orient(ScrollingStitcher.stitch(frames.map { try ScrollingStitcher.trim($0, top: top, bottom: bottom) }, overlaps: overlaps))
                 }.value
                 try Task.checkCancellation()
                 end(NSImage(cgImage: image, size: CGSize(width: image.width, height: image.height)))
@@ -142,9 +257,10 @@ final class ScrollCaptureController: NSObject, ObservableObject, NSWindowDelegat
 
     func cancel() { activeTask?.cancel(); end(nil) }
     private func end(_ image: NSImage?) {
+        automaticTask?.cancel(); automaticRun = UUID(); automatic = false
         let callback = completion
         completion = nil; capture = nil
-        scroll = nil
+        scroll = nil; firstOriginal = nil; hud?.orderOut(nil); hud = nil
         hotkeys.unregisterScrollingCapture()
         panel?.orderOut(nil); panel = nil
         frames = []; overlaps = []; pending = nil; preview = nil; seamPreview = nil; busy = false
@@ -158,17 +274,28 @@ private struct ScrollCaptureView: View {
     @State private var seamZoom = 1.0
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Scroll down in the source app, leaving part of the previous capture visible, then capture the next frame.")
+            Picker("Scroll direction", selection: $controller.direction) {
+                ForEach(ScrollDirection.allCases) { Text($0.title).tag($0) }
+            }.disabled(controller.frames.count > 1 || controller.pending != nil || controller.busy)
+                .onChange(of: controller.direction) { _, _ in controller.changeDirection() }
+            Text("Scroll in the selected direction, leaving part of the previous capture visible, then capture the next frame.")
                 .font(.callout)
             HStack {
                 Text("Ignore fixed areas (px)")
-                TextField("Top", value: $controller.trimTop, format: .number).frame(width: 55)
+                TextField("Leading edge", value: $controller.trimTop, format: .number).frame(width: 55)
                     .help("Remove fixed header from every frame")
-                TextField("Bottom", value: $controller.trimBottom, format: .number).frame(width: 55)
+                TextField("Trailing edge", value: $controller.trimBottom, format: .number).frame(width: 55)
                     .help("Remove fixed footer from every frame")
             }.disabled(controller.frames.count > 1 || controller.pending != nil || controller.busy)
             .onChange(of: controller.trimTop) { _, _ in controller.refreshPreview() }
             .onChange(of: controller.trimBottom) { _, _ in controller.refreshPreview() }
+            HStack {
+                Text("Wait for content (seconds)")
+                Slider(value: $controller.settleDelay, in: 0.5...3, step: 0.5)
+                Text(String(format: "%.1f", controller.settleDelay)).monospacedDigit()
+            }.disabled(controller.busy)
+            Text("Continuous capture pauses at uncertain seams and stops when content is unchanged. Press ⌃⌥N to pause while the panel is hidden.")
+                .font(.caption).foregroundStyle(.secondary)
             Toggle("Scroll automatically before the next capture", isOn: $controller.scrollBeforeCapture)
                 .disabled(controller.busy)
             Text(controller.shortcutAvailable ? "Capture from any app with ⌃⌥N." : "⌃⌥N is unavailable. Use Capture Next.")
@@ -217,6 +344,8 @@ private struct ScrollCaptureView: View {
             HStack {
                 Button("Cancel", action: controller.cancel)
                 Spacer()
+                Button("Auto Capture", action: controller.startAutomatic)
+                    .disabled(controller.busy || controller.pending != nil)
                 Button("Capture Next", action: controller.captureNext)
                     .disabled(controller.busy || controller.pending != nil)
                 Button("Finish", action: controller.finish)
@@ -224,5 +353,17 @@ private struct ScrollCaptureView: View {
             }
             if controller.busy { ProgressView().controlSize(.small) }
         }.padding(16)
+    }
+}
+
+private struct ScrollProgressView: View {
+    @ObservedObject var controller: ScrollCaptureController
+    var body: some View {
+        HStack {
+            ProgressView().controlSize(.small)
+            Text("\(controller.frames.count) frames").monospacedDigit()
+            Spacer()
+            Button("Pause", action: controller.pauseAutomatic).keyboardShortcut(.escape, modifiers: [])
+        }.padding(12)
     }
 }

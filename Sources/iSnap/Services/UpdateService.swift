@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(Sparkle)
+import Sparkle
+#endif
 
 struct ReleaseInfo: Decodable, Identifiable {
     let tagName: String
@@ -30,3 +33,26 @@ actor UpdateService {
     }
 }
 
+
+/// The distribution pipeline embeds the public key only after a signed feed is configured.
+@MainActor
+final class AppUpdater {
+    #if canImport(Sparkle)
+    private var controller: SPUStandardUpdaterController?
+    #endif
+    static func configured(_ info: [String: Any]) -> Bool {
+        guard let feed = info["SUFeedURL"] as? String, let url = URL(string: feed), url.scheme == "https", url.host != nil,
+              let key = info["SUPublicEDKey"] as? String, let bytes = Data(base64Encoded: key), bytes.count == 32 else { return false }
+        return true
+    }
+    func check(interactive: Bool) -> Bool {
+        #if canImport(Sparkle)
+        guard Self.configured(Bundle.main.infoDictionary ?? [:]) else { return false }
+        if controller == nil { controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil) }
+        if interactive, controller?.updater.canCheckForUpdates == true { controller?.checkForUpdates(nil) }
+        return true
+        #else
+        return false
+        #endif
+    }
+}

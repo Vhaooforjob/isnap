@@ -25,6 +25,13 @@ struct Annotation: Identifiable, Codable, Hashable {
     var layerName: String?
     var hidden: Bool?
     var locked: Bool?
+    var magnifierSource: CGRect?
+    var magnification: CGFloat?
+
+    var measurement: String {
+        let dx = abs(lineEndPoint.x - lineStartPoint.x), dy = abs(lineEndPoint.y - lineStartPoint.y)
+        return String(format: "%.0f × %.0f px · %.1f px", dx, dy, hypot(dx, dy))
+    }
 
     var isHidden: Bool { hidden ?? false }
     var isLocked: Bool { locked ?? false }
@@ -116,6 +123,15 @@ struct Annotation: Identifiable, Codable, Hashable {
         ]
     }
 
+    static func freehand(_ samples: [CGPoint], style: AnnotationStyle) -> Annotation {
+        let left = samples.map(\.x).min() ?? 0, top = samples.map(\.y).min() ?? 0
+        let frame = CGRect(x: left, y: top, width: max(1, (samples.map(\.x).max() ?? left) - left),
+            height: max(1, (samples.map(\.y).max() ?? top) - top))
+        var result = make(type: .freehand, from: frame.origin, to: CGPoint(x: frame.maxX, y: frame.maxY), style: style)
+        result.points = samples.map { CGPoint(x: $0.x - left, y: $0.y - top) }
+        return result
+    }
+
     static func make(type: EditorTool, from start: CGPoint, to end: CGPoint, style: AnnotationStyle) -> Annotation {
         let rect = CGRect(
             x: min(start.x, end.x),
@@ -124,7 +140,7 @@ struct Annotation: Identifiable, Codable, Hashable {
             height: abs(end.y - start.y)
         )
         let points: [CGPoint]
-        if type == .line || type == .arrow {
+        if type == .line || type == .arrow || type == .ruler {
             points = [
                 CGPoint(x: start.x - rect.minX, y: start.y - rect.minY),
                 CGPoint(x: end.x - rect.minX, y: end.y - rect.minY)
@@ -163,6 +179,7 @@ struct AnnotationStyle: Codable, Equatable {
 }
 
 struct CanvasConfiguration: Codable, Equatable {
+    static var sourcePixels: Self { var value = Self(); value.cornerRadius = 0; value.shadowSize = 0; return value }
     var padding: CGFloat = 40
     var cornerRadius: CGFloat = 12
     var shadowSize: CGFloat = 20

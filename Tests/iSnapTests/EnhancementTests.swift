@@ -321,6 +321,10 @@ final class EnhancementTests: XCTestCase {
         let drafts = directory.appendingPathComponent("Drafts")
         try ProjectStore.write(model.document.project(), to: drafts.appendingPathComponent("Workspace review.isnap"))
         await model.reloadLibrary()
+        try await render(CommandPaletteView(document: model.document).environmentObject(model),
+            to: output.appendingPathComponent("command-palette.png"), size: CGSize(width: 560, height: 420))
+        try await render(DuplicateFilesView().environmentObject(model),
+            to: output.appendingPathComponent("duplicates.png"), size: CGSize(width: 740, height: 540))
         try await render(ContentView().environmentObject(model), to: output.appendingPathComponent("editor.png"),
             size: CGSize(width: 940, height: 680))
         try await render(ContentView().environmentObject(model), to: output.appendingPathComponent("editor-wide-inspector.png"),
@@ -341,6 +345,15 @@ final class EnhancementTests: XCTestCase {
             })
         try await render(CompositionView(pages: [CompositionPage(url: library.appendingPathComponent("Bug report.png"), caption: "Report")]).environmentObject(model),
             to: output.appendingPathComponent("composition.png"), size: CGSize(width: 800, height: 520))
+        try await render(ImageComparisonView(urls: [library.appendingPathComponent("Bug report.png"), library.appendingPathComponent("Design review.png")]),
+            to: output.appendingPathComponent("comparison.png"), size: CGSize(width: 1000, height: 680))
+        try await render(CutOutView(document: model.document), to: output.appendingPathComponent("cut-out.png"), size: CGSize(width: 640, height: 580))
+        model.redactionSource = model.document.image
+        model.redactionRegions = [RecognizedRegion(text: "customer@example.com", rect: CGRect(x: 100, y: 100, width: 700, height: 70))]
+        try await render(RedactionReviewView().environmentObject(model), to: output.appendingPathComponent("redactions.png"), size: CGSize(width: 880, height: 600))
+        let guide = GuideController(directory: library)
+        guide.draft = GuideDraft(title: "Report a UI issue", steps: [GuideStep(filename: "Bug report.png", caption: "Open the affected screen"), GuideStep(filename: "Design review.png", caption: "Describe the difference")])
+        try await render(GuideView(controller: guide), to: output.appendingPathComponent("guide.png"), size: CGSize(width: 780, height: 600))
         model.features.state.workflows = [CaptureWorkflow()]
         try await render(WorkflowsView().environmentObject(model), to: output.appendingPathComponent("workflows.png"),
             size: CGSize(width: 790, height: 570))

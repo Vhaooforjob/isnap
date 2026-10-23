@@ -12,6 +12,10 @@ settings:
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: TXD67UY7X2
     ENABLE_HARDENED_RUNTIME: YES
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.10.0
 targets:
   iSnap:
     type: application
@@ -31,6 +35,7 @@ targets:
         SWIFT_EMIT_LOC_STRINGS: YES
         LOCALIZATION_PREFERS_STRING_CATALOGS: YES
     dependencies:
+      - package: Sparkle
       - target: iSnapWidget
         embed: true
       - sdk: AuthenticationServices.framework

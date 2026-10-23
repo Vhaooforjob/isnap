@@ -146,6 +146,8 @@ final class InteractiveCanvasView: NSView {
     private var dragStart: CGPoint?
     private var originalAnnotation: Annotation?
     private var temporaryAnnotation: Annotation?
+    private var lastEraserPoint: CGPoint?
+    private var freehandSamples: [CGPoint] = []
     private var dragHandle: DragHandle?
     private var didCheckpointDrag = false
     private var panOffset = CGPoint.zero
@@ -163,6 +165,30 @@ final class InteractiveCanvasView: NSView {
 
     func updatePreviewZoom(_ zoom: CGFloat) {
         if zoom <= 1 { panOffset = .zero }
+    }
+
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
+    override func accessibilityLabel() -> String? { String(localized: "Image canvas") }
+    override func accessibilityHelp() -> String? { String(localized: "Select a layer to move it with arrow keys. Shift moves ten pixels. Delete removes the selection.") }
+    override func accessibilityChildren() -> [Any]? {
+        guard let document, let window, let geometry = renderGeometry(document: document) else { return [] }
+        let preview = previewRect(for: geometry.output, zoom: document.previewZoom)
+        return document.annotations.filter { !$0.isHidden }.compactMap { item -> CanvasAccessibilityElement? in
+            guard let rect = viewRect(from: item.normalizedFrame, document: document, previewRect: preview, renderedSize: geometry.output) else { return nil }
+            let element = CanvasAccessibilityElement()
+            element.setAccessibilityParent(self); element.setAccessibilityRole(.button)
+            element.setAccessibilityLabel(item.displayName)
+            element.setAccessibilityValue(document.selectedAnnotationIDs.contains(item.id) ? String(localized: "Selected") : "")
+            element.setAccessibilityFrame(window.convertToScreen(convert(rect, to: nil)))
+            element.setAccessibilityEnabled(!item.isLocked)
+            element.activate = { [weak self, weak document] in
+                guard !item.isLocked else { return false }
+                document?.select(item.id); self?.window?.makeFirstResponder(self); self?.needsDisplay = true
+                return true
+            }
+            return element
+        }
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -207,10 +233,16 @@ final class InteractiveCanvasView: NSView {
               let point = sourcePoint(from: convert(event.locationInWindow, from: nil), document: document) else { return }
         window?.makeFirstResponder(self)
         dragStart = point
+        freehandSamples = [point]
         didCheckpointDrag = false
         dragHandle = nil
 
-        if document.tool == .select {
+        if document.tool == .sampler {
+            document.sampleColor(at: point); return
+        } else if document.tool == .eraser {
+            document.beginMutation(); lastEraserPoint = point
+            document.eraseStrokes(at: point, radius: max(5, document.style.strokeWidth * 2)); return
+        } else if document.tool == .select {
             let hit = document.annotations.reversed().first { annotation in
                 !annotation.isHidden && !annotation.isLocked && annotation.normalizedFrame.insetBy(dx: -8, dy: -8).contains(point)
             }
@@ -224,7 +256,7 @@ final class InteractiveCanvasView: NSView {
                 .reduce(CGRect.null) { $0.union($1.normalizedFrame) }
             if let hit, document.selectedAnnotationIDs.count == 1 {
                 let tolerance = selectionTolerance(document: document)
-                if hit.type == .line || hit.type == .arrow {
+                if hit.type == .line || hit.type == .arrow || hit.type == .ruler {
                     if distance(hit.lineStartPoint, point) <= tolerance {
                         dragHandle = .lineStart
                     } else if distance(hit.lineEndPoint, point) <= tolerance {
@@ -249,6 +281,16 @@ final class InteractiveCanvasView: NSView {
     override func mouseDragged(with event: NSEvent) {
         guard let document, let start = dragStart,
               let point = sourcePoint(from: convert(event.locationInWindow, from: nil), document: document) else { return }
+        if document.tool == .eraser {
+            let previous = lastEraserPoint ?? point, radius = max(5, document.style.strokeWidth * 2)
+            let steps = max(1, Int(ceil(hypot(point.x - previous.x, point.y - previous.y) / radius)))
+            for i in 1...steps {
+                let t = CGFloat(i) / CGFloat(steps)
+                document.eraseStrokes(at: CGPoint(x: previous.x + (point.x - previous.x) * t,
+                    y: previous.y + (point.y - previous.y) * t), radius: radius)
+            }
+            lastEraserPoint = point; needsDisplay = true; return
+        }
         if document.tool == .select, var annotation = originalAnnotation {
             guard document.selectedAnnotationIDs.contains(annotation.id) else { return }
             if !didCheckpointDrag {
@@ -301,11 +343,29 @@ final class InteractiveCanvasView: NSView {
                     snapGuides.removeAll { !$0.vertical }
                 }
             }
+            if annotation.type.isStroke, dragHandle == .boundsBottomRight, let originalAnnotation {
+                annotation.points = originalAnnotation.points.map {
+                    CGPoint(x: $0.x * annotation.frame.width / max(1, originalAnnotation.frame.width),
+                            y: $0.y * annotation.frame.height / max(1, originalAnnotation.frame.height))
+                }
+            }
             document.update(annotation)
         } else if document.tool == .crop {
             document.cropRect = constrainedRect(from: start, to: point, ratio: document.cropAspectRatio.value)
         } else if temporaryAnnotation != nil {
-            temporaryAnnotation = Annotation.make(type: document.tool, from: start, to: point, style: document.style)
+            if document.tool.isStroke {
+                if let last = freehandSamples.last, distance(last, point) >= 1, freehandSamples.count < 20_000 {
+                    freehandSamples.append(point)
+                }
+                temporaryAnnotation = Annotation.freehand(freehandSamples, style: document.style)
+                temporaryAnnotation?.type = document.tool
+            } else {
+                temporaryAnnotation = Annotation.make(type: document.tool, from: start, to: point, style: document.style)
+                if document.tool == .magnifier {
+                    let frame = temporaryAnnotation?.normalizedFrame
+                    temporaryAnnotation?.magnifierSource = frame
+                }
+            }
         }
         needsDisplay = true
     }
@@ -327,8 +387,22 @@ final class InteractiveCanvasView: NSView {
                 let size = max(36, max(abs(value.frame.width), abs(value.frame.height)))
                 value.frame = CGRect(x: value.frame.minX, y: value.frame.minY, width: size, height: size)
             }
-            if value.normalizedFrame.width >= 3 || value.normalizedFrame.height >= 3 {
+            if value.type == .magnifier {
+                let frame = value.normalizedFrame
+                if frame.width < 8 || frame.height < 8 { temporaryAnnotation = nil }
+                else {
+                    value.magnifierSource = frame
+                    value.magnification = 2
+                    value.frame = CGRect(x: frame.minX, y: frame.minY, width: frame.width * 2, height: frame.height * 2)
+                }
+            }
+            if temporaryAnnotation != nil && (value.normalizedFrame.width >= 3 || value.normalizedFrame.height >= 3) {
+                if value.type.isStroke {
+                    let geometry = Annotation.freehand(StrokeGeometry.smooth(StrokeGeometry.worldPoints(value)), style: document.style)
+                    value.frame = geometry.frame; value.points = geometry.points
+                }
                 document.add(value)
+                if value.type.isStroke { document.tool = value.type; document.selectedAnnotationID = nil }
                 if (value.type == .text || value.type == .number),
                    let added = document.selectedAnnotation {
                     document.presentEditor(for: added, checkpointOnCommit: false)
@@ -338,6 +412,7 @@ final class InteractiveCanvasView: NSView {
         dragStart = nil
         originalAnnotation = nil
         temporaryAnnotation = nil
+        freehandSamples = []
         dragHandle = nil
         didCheckpointDrag = false
         snapGuides = []
@@ -499,7 +574,7 @@ final class InteractiveCanvasView: NSView {
         NSColor.white.setFill()
         NSColor.controlAccentColor.setStroke()
         let points: [CGPoint]
-        if annotation.type == .line || annotation.type == .arrow {
+        if annotation.type == .line || annotation.type == .arrow || annotation.type == .ruler {
             points = [annotation.lineStartPoint, annotation.lineEndPoint].compactMap {
                 viewPoint(from: $0, document: document, previewRect: previewRect, renderedSize: renderedSize)
             }
@@ -563,4 +638,10 @@ final class InteractiveCanvasView: NSView {
         title.draw(at: CGPoint(x: bounds.midX - titleSize.width / 2, y: bounds.midY - 20), withAttributes: titleAttributes)
         subtitle.draw(at: CGPoint(x: bounds.midX - subtitleSize.width / 2, y: bounds.midY + 14), withAttributes: subtitleAttributes)
     }
+}
+
+@MainActor
+private final class CanvasAccessibilityElement: NSAccessibilityElement {
+    var activate: (() -> Bool)?
+    override func accessibilityPerformPress() -> Bool { activate?() ?? false }
 }

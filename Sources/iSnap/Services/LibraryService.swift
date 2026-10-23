@@ -14,8 +14,18 @@ actor LibraryService {
                   values.isRegularFile == true,
                   let dimensions = ImageIOService.pixelSize(at: url) else { return nil }
             return LibraryItem(url: url, modifiedAt: values.contentModificationDate ?? .distantPast, dimensions: dimensions,
-                byteCount: values.fileSize ?? 0)
+                byteCount: values.fileSize ?? 0, fileIdentity: FileIdentity.read(url))
         }.sorted { $0.modifiedAt > $1.modifiedAt }
+    }
+
+    func rename(_ item: LibraryItem, name: String, root: URL) throws {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, !name.contains("/"), !name.contains(":"), !name.hasPrefix("."),
+              item.url.standardizedFileURL.resolvingSymlinksInPath().deletingLastPathComponent() == root.standardizedFileURL.resolvingSymlinksInPath() else { throw CocoaError(.fileWriteInvalidFileName) }
+        let target = root.appendingPathComponent(name).appendingPathExtension(item.url.pathExtension)
+        guard target != item.url else { return }
+        guard !FileManager.default.fileExists(atPath: target.path) else { throw CocoaError(.fileWriteFileExists) }
+        try FileManager.default.moveItem(at: item.url, to: target)
     }
 
     func publishWidgetSnapshot(_ items: [LibraryItem]) {

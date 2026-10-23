@@ -8,3 +8,5 @@ xcuserdata/
 .swiftpm/
 Package.resolved
 brag-output*/
+
+!iSnap.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved

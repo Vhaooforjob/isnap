@@ -5,6 +5,9 @@ struct LibraryView: View {
     @EnvironmentObject private var model: AppModel
     @State private var selected: Set<URL> = []
     @State private var query = ""
+    @State private var collectionID: UUID?
+    @State private var comparisonURLs: [URL] = []
+    @State private var showingComparison = false
     @State private var searchQuery = ""
     @State private var sort = LibrarySort.newest
     @State private var anchor: URL?
@@ -21,6 +24,7 @@ struct LibraryView: View {
     private var filtered: [LibraryItem] {
         sort.sorted(model.libraryItems.filter { item in
             let metadata = model.features.metadata(for: item.url)
+            if let collectionID, !(metadata.collectionIDs ?? []).contains(collectionID) { return false }
             if favoritesOnly && !metadata.favorite { return false }
             if days > 0 && item.modifiedAt < Calendar.current.date(byAdding: .day, value: -days, to: Date())! { return false }
             let haystack = [item.name, metadata.tags.joined(separator: " "), model.indexedText[item.url] ?? ""].joined(separator: " ")
@@ -50,7 +54,11 @@ struct LibraryView: View {
                     ForEach(LibrarySort.allCases) { Text($0.title).tag($0) }
                 }.frame(width: 175)
             }.padding(.horizontal).padding(.bottom, 8)
+            collectionControls.padding(.horizontal).padding(.bottom, 8)
             HStack {
+                Button("Compare") {
+                    comparisonURLs = selection.map(\.url); showingComparison = true
+                }.disabled(selection.count != 2)
                 Button("Select All") { selected = Set(filtered.map(\.url)) }
                 Button("Deselect") { selected.removeAll() }.disabled(selected.isEmpty)
                 Button("Quick Look") { previewURL = selectedPreviewURL }.disabled(selection.isEmpty)
@@ -84,7 +92,69 @@ struct LibraryView: View {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(filtered) { item in
-                            VStack(alignment: .leading, spacing: 4) {
+                            libraryCell(item)
+                        }
+                    }
+                    .background(GeometryReader { geometry in
+                        Color.clear.onAppear { updateColumns(geometry.size.width) }
+                            .onChange(of: geometry.size.width) { _, width in updateColumns(width) }
+                    })
+                    .padding(20)
+                }
+                .focusable().focused($gridFocused)
+                .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow, .space, .return]) { key in
+                    handleKey(key)
+                }
+                .onChange(of: cursor) { _, url in if let url { proxy.scrollTo(url) } }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .task { await model.reloadLibrary(); acceptReviewSelection() }
+        .onChange(of: model.libraryReviewSelection) { _, _ in acceptReviewSelection() }
+        .task(id: query) {
+            do { try await Task.sleep(for: .milliseconds(180)); searchQuery = query }
+            catch {}
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task { await model.reloadLibrary() }
+        }
+        .sheet(isPresented: Binding(get: { previewURL != nil }, set: { if !$0 { previewURL = nil } })) {
+            if let url = previewURL {
+                LibraryQuickLook(url: url, previous: { navigatePreview(-1) }, next: { navigatePreview(1) },
+                    close: { previewURL = nil })
+            }
+        }
+        .sheet(isPresented: $showingComparison) { ImageComparisonView(urls: comparisonURLs) }
+        .onChange(of: filtered.map(\.url)) { _, urls in
+            selected.formIntersection(Set(urls))
+            if let cursor, !urls.contains(cursor) { self.cursor = nil }
+            if let anchor, !urls.contains(anchor) { self.anchor = nil }
+            if let previewURL, !urls.contains(previewURL) { self.previewURL = nil }
+        }
+        .onChange(of: model.libraryItems) { _, items in selected.formIntersection(Set(items.map(\.url))) }
+        .onDeleteCommand { confirmDelete(selection) }
+        .confirmationDialog("Move selected screenshots to Trash?", isPresented: $isConfirmingDelete) {
+            Button("Move \(deletionItems.count) Screenshots to Trash", role: .destructive) {
+                let items = deletionItems
+                Task { await model.deleteLibraryItems(items) }
+                selected.subtract(items.map(\.url))
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text("You can recover these images from the Trash.") }
+    }
+
+    private func acceptReviewSelection() {
+        guard let urls = model.libraryReviewSelection else { return }
+        query = ""; searchQuery = ""; collectionID = nil; favoritesOnly = false; days = 0
+        selected = urls.intersection(Set(model.libraryItems.map(\.url)))
+        cursor = selected.sorted { $0.path < $1.path }.first
+        model.libraryReviewSelection = nil
+    }
+
+    private func libraryCell(_ item: LibraryItem) -> some View {
+VStack(alignment: .leading, spacing: 4) {
                                 LibraryCard(item: item, isSelected: selected.contains(item.url))
                                     .onTapGesture(count: 2) { model.openLibraryItem(item) }
                                     .onTapGesture {
@@ -109,64 +179,147 @@ struct LibraryView: View {
                                 }.padding(.horizontal, 8)
                             }
                             .id(item.url)
-                            .contextMenu {
+        .contextMenu { itemMenu(item) }
+    }
+
+    @ViewBuilder private func itemMenu(_ item: LibraryItem) -> some View {
+
                                 Button("Open in Editor") { model.openLibraryItem(item) }
                                 Button("Quick Look") { previewURL = item.url }
                                 Button("Pin on Screen") { model.pinImage(at: item.url) }
                                 Button("Edit Tags") { model.editTags(for: [item]) }
+                                Button("Rename Image…") {
+                                    guard let name = promptName(item.url.deletingPathExtension().lastPathComponent) else { return }
+                                    Task {
+                                        do { try await model.renameLibraryItem(item, name: name) }
+                                        catch { model.errorMessage = error.localizedDescription }
+                                    }
+                                }
                                 Button("Share…") { model.showShareMenu(for: item.url) }
                                 Button("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([item.url]) }
                                 Divider()
                                 Button("Move to Trash", role: .destructive) { confirmDelete([item]) }
-                            }
-                        }
+
+    }
+
+    private var collectionControls: some View {
+        HStack {
+            Picker("Collection", selection: $collectionID) {
+                Text("All Images").tag(UUID?.none)
+                ForEach(model.features.state.collections ?? []) { item in
+                    Text(item.name).tag(Optional(item.id))
+                }
+            }.frame(width: 220)
+            Menu("Collections") {
+                Button("New Collection…") {
+                    guard let name = promptName() else { return }
+                    let collection = LibraryCollection(name: name)
+                    model.features.state.collections = (model.features.state.collections ?? []) + [collection]
+                    model.features.setCollection(collection.id, for: selection.map(\.url), included: true)
+                    collectionID = collection.id
+                }
+                if let id = collectionID {
+                    Button("Rename Collection…") {
+                        guard let index = model.features.state.collections?.firstIndex(where: { $0.id == id }),
+                              let name = promptName(model.features.state.collections?[index].name ?? "") else { return }
+                        model.features.state.collections?[index].name = name
                     }
-                    .background(GeometryReader { geometry in
-                        Color.clear.onAppear { updateColumns(geometry.size.width) }
-                            .onChange(of: geometry.size.width) { _, width in updateColumns(width) }
-                    })
-                    .padding(20)
+                    Button("Remove Selected from Collection") {
+                        model.features.setCollection(id, for: selection.map(\.url), included: false)
+                    }.disabled(selection.isEmpty)
+                    Button("Delete Collection", role: .destructive) {
+                        collectionID = nil; model.features.deleteCollection(id)
+                    }
                 }
-                .focusable().focused($gridFocused)
-                .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow, .space, .return]) { key in
-                    handleKey(key)
+                Menu("Add Selected to Collection") {
+                    ForEach(model.features.state.collections ?? []) { item in
+                        Button(item.name) { model.features.setCollection(item.id, for: selection.map(\.url), included: true) }
+                    }
+                }.disabled(selection.isEmpty)
+            }
+            Menu("Metadata") {
+                Button("Find Duplicate Files…") { model.isShowingDuplicates = true }
+                Divider()
+                Button("Export Metadata Backup…") { metadataBackup(importing: false) }
+                Button("Import Metadata Backup…") { metadataBackup(importing: true) }
+                Menu("Relink Missing Image") {
+                    ForEach((model.features.state.detachedMetadata ?? [:]).keys.sorted(), id: \.self) { path in
+                        Button(URL(fileURLWithPath: path).lastPathComponent) { relink(path) }
+                    }
+                }.disabled(model.features.state.detachedMetadata?.isEmpty != false)
+            }
+            Menu("Saved Filters") {
+                Button("Save Current Filter…") {
+                    guard let name = promptName() else { return }
+                    let filter = SavedLibraryFilter(name: name, query: query, favoritesOnly: favoritesOnly,
+                        days: days, collectionID: collectionID, sort: sort.rawValue)
+                    model.features.state.savedFilters = (model.features.state.savedFilters ?? []) + [filter]
                 }
-                .onChange(of: cursor) { _, url in if let url { proxy.scrollTo(url) } }
+                Button("Reset Filters") { query = ""; searchQuery = ""; favoritesOnly = false; days = 0; collectionID = nil; sort = .newest }
+                ForEach(model.features.state.savedFilters ?? []) { filter in
+                    Menu(filter.name) {
+                        Button("Apply") {
+                            query = filter.query; searchQuery = filter.query; favoritesOnly = filter.favoritesOnly
+                            days = filter.days; collectionID = filter.collectionID; sort = LibrarySort(rawValue: filter.sort) ?? .newest
+                        }
+                        Button("Rename…") {
+                            guard let name = promptName(filter.name),
+                                  let index = model.features.state.savedFilters?.firstIndex(where: { $0.id == filter.id }) else { return }
+                            model.features.state.savedFilters?[index].name = name
+                        }
+                        Button("Delete", role: .destructive) { model.features.state.savedFilters?.removeAll { $0.id == filter.id } }
+                    }
                 }
             }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Color(nsColor: .windowBackgroundColor))
-        .task { await model.reloadLibrary() }
-        .task(id: query) {
-            do { try await Task.sleep(for: .milliseconds(180)); searchQuery = query }
-            catch {}
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            Task { await model.reloadLibrary() }
-        }
-        .sheet(isPresented: Binding(get: { previewURL != nil }, set: { if !$0 { previewURL = nil } })) {
-            if let url = previewURL {
-                LibraryQuickLook(url: url, previous: { navigatePreview(-1) }, next: { navigatePreview(1) },
-                    close: { previewURL = nil })
+            Menu("Quick Tag") {
+                Button("New Tag…") {
+                    guard let tag = promptName() else { return }
+                    model.features.addTag(tag, to: selection.map(\.url))
+                }
+                ForEach(Array(Set(model.features.state.metadata.values.flatMap(\.tags))).sorted(), id: \.self) { tag in
+                    Button(tag) { model.features.addTag(tag, to: selection.map(\.url)) }
+                }
+            }.disabled(selection.isEmpty)
+            Spacer()
+        }.controlSize(.small)
+    }
+
+    private func relink(_ oldPath: String) {
+        let panel = NSOpenPanel(); panel.allowedContentTypes = [.png, .jpeg]
+        guard panel.runModal() == .OK, let url = panel.url,
+              let dimensions = ImageIOService.pixelSize(at: url) else { return }
+        let item = LibraryItem(url: url, modifiedAt: Date(), dimensions: dimensions, fileIdentity: FileIdentity.read(url))
+        model.features.relinkMetadata(from: oldPath, to: item)
+        Task { await model.reloadLibrary() }
+    }
+
+    private func metadataBackup(importing: Bool) {
+        do {
+            if importing {
+                let panel = NSOpenPanel(); panel.allowedContentTypes = [.json]
+                guard panel.runModal() == .OK, let url = panel.url else { return }
+                try model.features.importLibraryMetadata(Data(contentsOf: url))
+                Task { await model.reloadLibrary() }
+            } else {
+                let panel = NSSavePanel(); panel.allowedContentTypes = [.json]; panel.nameFieldStringValue = "iSnap-Library-Metadata.json"
+                guard panel.runModal() == .OK, let url = panel.url else { return }
+                try model.features.exportLibraryMetadata().write(to: url, options: .atomic)
             }
-        }
-        .onChange(of: filtered.map(\.url)) { _, urls in
-            selected.formIntersection(Set(urls))
-            if let cursor, !urls.contains(cursor) { self.cursor = nil }
-            if let anchor, !urls.contains(anchor) { self.anchor = nil }
-            if let previewURL, !urls.contains(previewURL) { self.previewURL = nil }
-        }
-        .onChange(of: model.libraryItems) { _, items in selected.formIntersection(Set(items.map(\.url))) }
-        .onDeleteCommand { confirmDelete(selection) }
-        .confirmationDialog("Move selected screenshots to Trash?", isPresented: $isConfirmingDelete) {
-            Button("Move \(deletionItems.count) Screenshots to Trash", role: .destructive) {
-                let items = deletionItems
-                Task { await model.deleteLibraryItems(items) }
-                selected.subtract(items.map(\.url))
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: { Text("You can recover these images from the Trash.") }
+        } catch { model.errorMessage = error.localizedDescription }
+    }
+
+    private func promptName(_ initial: String = "") -> String? {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Name")
+        let field = NSTextField(string: initial)
+        field.frame = NSRect(x: 0, y: 0, width: 300, height: 24)
+        alert.accessoryView = field
+        alert.addButton(withTitle: String(localized: "Save"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        alert.window.initialFirstResponder = field
+        guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+        let name = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? nil : name
     }
 
     private func confirmDelete(_ items: [LibraryItem]) {

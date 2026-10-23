@@ -6,6 +6,8 @@ struct AnnotationToolbar: View {
     @ObservedObject var document: EditorDocument
     @State private var isShowingControls = false
     @State private var isShowingStickers = false
+    @State private var presetName = ""
+    @State private var showingPresetName = false
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -19,6 +21,14 @@ struct AnnotationToolbar: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
         .background(.bar)
+        .alert("Save Style", isPresented: $showingPresetName) {
+            TextField("Name", text: $presetName)
+            Button("Save") {
+                let name = presetName.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !name.isEmpty { model.features.state.annotationPresets = (model.features.state.annotationPresets ?? []) + [AnnotationPreset(name: name, style: document.style)] }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
     }
 
     private var fullToolbar: some View {
@@ -93,16 +103,35 @@ struct AnnotationToolbar: View {
 
     @ViewBuilder
     private var toolButtons: some View {
-        ForEach(EditorTool.allCases.filter { $0 != .image }) { tool in
+        ForEach(EditorTool.allCases.filter { $0 != .image && ![.highlighter, .eraser, .ruler, .sampler].contains($0) }) { tool in
             Button {
                 document.tool = tool
                 if tool != .select { document.selectedAnnotationID = nil }
             } label: {
                 Image(systemName: tool.symbol).frame(width: 18, height: 18)
             }
+            .accessibilityLabel(tool.title)
             .tint(document.tool == tool ? .accentColor : nil)
             .help("\(tool.title) (\(shortcut(for: tool)))")
         }
+        Menu {
+            ForEach([EditorTool.highlighter, .eraser, .ruler, .sampler]) { tool in
+                Button(tool.title, systemImage: tool.symbol) {
+                    document.tool = tool; document.selectedAnnotationID = nil
+                    if tool == .highlighter { document.style.strokeWidth = 20 }
+                }
+            }
+            Button("Cut Out…") { model.isShowingCutOut = true }.disabled(document.image == nil)
+            Divider()
+            Button("Save Current Style…") { presetName = ""; showingPresetName = true }
+            ForEach(model.features.state.annotationPresets ?? []) { preset in
+                Menu(preset.name) {
+                    Button("Apply") { document.style = preset.style; document.selectedAnnotationID = nil }
+                    Button("Delete", role: .destructive) { model.features.state.annotationPresets?.removeAll { $0.id == preset.id } }
+                }
+            }
+        } label: { Image(systemName: "ellipsis.circle") }
+        .accessibilityLabel("More tools and saved styles")
     }
 
     @ViewBuilder
@@ -224,6 +253,27 @@ struct AnnotationToolbar: View {
 
     @ViewBuilder
     private var contextControls: some View {
+        if document.tool == .sampler {
+            Text(document.sampledColor.isEmpty ? String(localized: "Click an image pixel to sample its color.") : document.sampledColor)
+                .font(.caption).textSelection(.enabled)
+            Button("Copy Color") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(document.sampledColor, forType: .string) }
+                .disabled(document.sampledColor.isEmpty)
+        }
+        if let selected = document.selectedAnnotation, selected.type == .ruler {
+            Button(selected.measurement) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(selected.measurement, forType: .string) }
+                .help("Copy measurement in image pixels")
+        }
+        if let selected = document.selectedAnnotation, selected.type == .magnifier {
+            HStack {
+                Text("Magnification")
+                Slider(value: Binding(get: { Double(document.selectedAnnotation?.magnification ?? 2) }, set: { value in
+                    guard var item = document.selectedAnnotation else { return }
+                    item.magnification = value
+                    document.update(item, checkpoint: true)
+                }), in: 1...5, step: 0.25).frame(width: 80)
+                Text(String(format: "%.2g×", Double(document.selectedAnnotation?.magnification ?? 2)))
+            }
+        }
         if document.tool == .crop {
             Picker("Ratio", selection: $document.cropAspectRatio) {
                 ForEach(CropAspectRatio.allCases) { Text($0.title).tag($0) }
@@ -307,6 +357,8 @@ struct AnnotationToolbar: View {
 
     private func shortcut(for tool: EditorTool) -> String {
         switch tool {
+        case .freehand: "P"
+        case .magnifier: "M"
         case .select: "V"
         case .crop: "C"
         case .rectangle: "R"
@@ -316,7 +368,7 @@ struct AnnotationToolbar: View {
         case .text: "T"
         case .spotlight: "S"
         case .number: "N"
-        case .image, .redact, .blur, .pixelate: "—"
+        case .image, .redact, .blur, .pixelate, .highlighter, .eraser, .ruler, .sampler: "—"
         }
     }
 }

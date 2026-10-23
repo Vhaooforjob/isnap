@@ -56,6 +56,39 @@ enum ScrollingStitcher {
         return Int((Double(best.0) * Double(previous.height) / Double(height)).rounded())
     }
 
+    /// Continuous capture requires a full-height refinement rather than accepting a
+    /// rounded thumbnail estimate, which can otherwise lose rows on Retina displays.
+    static func automaticOverlap(previous: CGImage, next: CGImage) -> Int? {
+        guard previous.height <= 8192, let estimate = estimateOverlap(previous: previous, next: next),
+              let a = samples(previous, width: 96, height: previous.height),
+              let b = samples(next, width: 96, height: next.height) else { return nil }
+        let radius = max(3, Int(ceil(Double(previous.height) / 512)) * 2)
+        let low = max(1, estimate - radius), high = min(previous.height - 1, estimate + radius)
+        guard low <= high else { return nil }
+        var scores: [(overlap: Int, error: Double)] = []
+        for overlap in low...high {
+            var error = 0.0, count = 0
+            for y in stride(from: 0, to: overlap, by: max(1, overlap / 128)) {
+                for x in stride(from: 4, to: 92, by: 2) {
+                    error += abs(Double(a[(previous.height - overlap + y) * 96 + x]) - Double(b[y * 96 + x]))
+                    count += 1
+                }
+            }
+            scores.append((overlap, error / Double(max(1, count))))
+        }
+        guard let best = scores.min(by: { $0.error < $1.error }), best.error < 6 else { return nil }
+        let competitor = scores.filter { abs($0.overlap - best.overlap) > 1 }.map(\.error).min() ?? 255
+        return competitor > best.error * 1.3 + 2 ? best.overlap : nil
+    }
+
+    static func unchanged(_ a: CGImage, _ b: CGImage) -> Bool {
+        guard a.width == b.width, a.height == b.height,
+              let left = samples(a, width: min(a.width, 256), height: min(a.height, 512)),
+              let right = samples(b, width: min(b.width, 256), height: min(b.height, 512)) else { return false }
+        let error = zip(left, right).reduce(0.0) { $0 + abs(Double($1.0) - Double($1.1)) }
+        return error / Double(left.count) < 0.6
+    }
+
     private static func samples(_ image: CGImage, width: Int, height: Int) -> [UInt8]? {
         var pixels = [UInt8](repeating: 0, count: width * height)
         let success = pixels.withUnsafeMutableBytes { bytes -> Bool in

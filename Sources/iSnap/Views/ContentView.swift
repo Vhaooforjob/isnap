@@ -17,12 +17,17 @@ struct ContentView: View {
         }
         .frame(minWidth: 940, maxWidth: .infinity, minHeight: 680, maxHeight: .infinity, alignment: .top)
         .task { await model.reloadLibrary() }
+        .sheet(isPresented: $model.isShowingCommands, onDismiss: model.finishCommandSearch) {
+            CommandPaletteView(document: model.document).environmentObject(model)
+        }
+        .sheet(isPresented: $model.isShowingDuplicates) { DuplicateFilesView().environmentObject(model) }
+        .sheet(isPresented: $model.isShowingCutOut) { CutOutView(document: model.document) }
         .sheet(isPresented: $model.isShowingWindowPicker) {
             WindowPickerView().environmentObject(model)
         }
         .sheet(isPresented: $model.isShowingParsedData) {
             ScreenshotParseView(text: $model.recognizedText, sourceName: model.recognizedSourceName,
-                image: model.recognizedImage, regions: model.recognizedRegions)
+                image: model.recognizedImage, regions: model.recognizedRegions, codes: model.recognizedCodes)
         }
         .sheet(isPresented: $model.isShowingBatchExport) {
             BatchExportView().environmentObject(model)

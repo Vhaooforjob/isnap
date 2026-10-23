@@ -16,6 +16,8 @@ final class EditorDocument: ObservableObject {
         didSet { selectedAnnotationIDs = selectedAnnotationID.map { [$0] } ?? [] }
     }
     @Published private(set) var selectedAnnotationIDs: Set<UUID> = []
+    @Published var sampledColor = ""
+    private var samplingTask: Task<Void, Never>?
     @Published var tool = EditorTool.select
     @Published var snappingEnabled = true
     @Published var style = AnnotationStyle()
@@ -255,6 +257,7 @@ final class EditorDocument: ObservableObject {
             var translated = item
             translated.frame.origin.x -= clipped.minX
             translated.frame.origin.y -= clipped.minY
+            translated.magnifierSource = item.magnifierSource?.offsetBy(dx: -clipped.minX, dy: -clipped.minY)
             return translated
         }
         lastAppliedCrop = clipped
@@ -413,6 +416,47 @@ final class EditorDocument: ObservableObject {
 
     func resetPreviewZoom() {
         previewZoom = 1
+    }
+
+    func applyCutOut(_ result: CutOutResult) {
+        checkpoint()
+        image = NSImage(cgImage: result.image, size: CGSize(width: result.image.width, height: result.image.height))
+        annotations = result.annotations; cropRect = nil; isCropApplied = false
+        originalImage = nil; originalAnnotations = []; lastAppliedCrop = nil
+        selectedAnnotationID = nil; isDirty = true
+    }
+
+    func sampleColor(at point: CGPoint) {
+        samplingTask?.cancel()
+        guard let image, let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return }
+        let annotations = annotations
+        samplingTask = Task {
+            do {
+                let rendered = try await BackgroundExportService().render(ImageRenderSnapshot(image: cg,
+                    annotations: annotations, canvas: .sourcePixels, includeBackground: false), format: .png, quality: 1)
+                try Task.checkCancellation()
+                guard self.image === image, self.annotations == annotations else { return }
+                sampledColor = try PixelSample.read(rendered.image, at: point).description
+            } catch is CancellationError {} catch { sampledColor = error.localizedDescription }
+        }
+    }
+
+    func eraseStrokes(at point: CGPoint, radius: CGFloat) {
+        var updated: [Annotation] = []
+        for item in annotations {
+            guard item.type.isStroke, !item.isHidden, !item.isLocked else { updated.append(item); continue }
+            let points = StrokeGeometry.worldPoints(item)
+            let pieces = StrokeGeometry.erase(points, center: point, radius: radius + item.strokeWidth / 2)
+            if pieces == [points] { updated.append(item); continue }
+            for (index, piece) in pieces.enumerated() {
+                let geometry = Annotation.freehand(piece, style: style)
+                var part = item
+                part.id = index == 0 ? item.id : UUID()
+                part.frame = geometry.frame; part.points = geometry.points; part.rotation = 0
+                updated.append(part)
+            }
+        }
+        if updated != annotations { annotations = updated; isDirty = true; selectedAnnotationID = nil }
     }
 
     private var currentSnapshot: Snapshot {

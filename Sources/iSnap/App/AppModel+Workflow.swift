@@ -4,9 +4,14 @@ extension AppModel {
     func cancelWorkflow() { workflowTask?.cancel(); regionCoordinator.cancelSelection() }
 
     func runWorkflow(_ workflow: CaptureWorkflow) {
-        guard !isCapturing, !isWorkflowRunning, !isUploading, !isExporting else { return }
+        do { _ = try startWorkflow(workflow) }
+        catch { errorMessage = error.localizedDescription }
+    }
+
+    func startWorkflow(_ workflow: CaptureWorkflow) throws -> Task<RenderedExport, Error> {
+        guard !isCapturing, !isWorkflowRunning, !isUploading, !isExporting else { throw AutomationError.busy }
         isWorkflowRunning = true; isCapturing = true
-        workflowTask = Task {
+        let task = Task<RenderedExport, Error> {
             let windows = NSApp.windows.filter(\.isVisible)
             defer {
                 isWorkflowRunning = false; isCapturing = false
@@ -53,15 +58,19 @@ extension AppModel {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.writeObjects([NSImage(cgImage: output.image, size: CGSize(width: output.image.width, height: output.image.height))])
                 }
-                guard loadIntoEditor(result) else { return }
+                guard loadIntoEditor(result) else { throw AutomationError.draftPreservation }
                 document.updateCanvas { $0 = canvas }
                 if let provider = workflow.activeUploadProvider {
                     try Task.checkCancellation()
                     await startUpload(data: output.data, fileExtension: preferences.export.defaultFormat.fileExtension, provider: provider)
                 } else { statusText = String(localized: "Workflow completed") }
-            } catch is CancellationError { statusText = String(localized: "Workflow cancelled") }
-            catch { errorMessage = error.localizedDescription }
+                return output
+            } catch is CancellationError {
+                statusText = String(localized: "Workflow cancelled"); throw CancellationError()
+            } catch { errorMessage = error.localizedDescription; throw error }
         }
+        workflowTask = task
+        return task
     }
 }
 

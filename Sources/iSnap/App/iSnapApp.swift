@@ -17,7 +17,7 @@ struct iSnapApp: App {
                 }
                 .onAppear {
                     appDelegate.model = model
-                    if model.settings.value.update.checkOnStartup { Task { await model.checkForUpdates() } }
+                    if model.settings.value.update.checkOnStartup { Task { await model.checkForUpdates(interactive: false) } }
                 }
         }
         .defaultSize(width: 1200, height: 820)
@@ -321,6 +321,10 @@ private struct iSnapCommands: Commands {
             Button("Settings…", action: model.showSettings).keyboardShortcut(",")
         }
         CommandGroup(replacing: .newItem) {
+            Button("Search Commands…") {
+                model.presentMainWindow?(); model.isShowingCommands = true
+            }.keyboardShortcut("k", modifiers: .command)
+            Divider()
             Button("Open Image…", action: model.openImage).keyboardShortcut("o")
             Button("Open Project…", action: model.openProject)
             Button("Paste Image", action: model.pasteImage).keyboardShortcut("v")
@@ -349,6 +353,8 @@ private struct iSnapCommands: Commands {
             Button("Rectangle Tool") { model.document.tool = .rectangle }.keyboardShortcut("r", modifiers: [])
             Button("Ellipse Tool") { model.document.tool = .ellipse }.keyboardShortcut("e", modifiers: [])
             Button("Arrow Tool") { model.document.tool = .arrow }.keyboardShortcut("a", modifiers: [])
+            Button("Freehand Tool") { model.document.tool = .freehand }.keyboardShortcut("p", modifiers: [])
+            Button("Magnifier Tool") { model.document.tool = .magnifier }.keyboardShortcut("m", modifiers: [])
             Button("Line Tool") { model.document.tool = .line }.keyboardShortcut("l", modifiers: [])
             Button("Text Tool") { model.document.tool = .text }.keyboardShortcut("t", modifiers: [])
             Button("Number Tool") { model.document.tool = .number }.keyboardShortcut("n", modifiers: [])

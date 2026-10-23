@@ -8,6 +8,9 @@ struct CompositionView: View {
     @State private var options = CompositionOptions()
     @State private var task: Task<Void, Never>?
     @State private var busy = false
+    @State private var searchable = true
+    @State private var pdfLayout = PDFPageLayout.a4
+    @State private var progress = ""
     @State private var error: String?
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -38,7 +41,14 @@ struct CompositionView: View {
                 Stepper("Spacing \(Int(options.spacing)) px", value: $options.spacing, in: 0...200, step: 8)
             }.disabled(busy)
             Toggle("Include captions", isOn: $options.captions).disabled(busy)
-            Text("PDF uses one image per page in the displayed order. Combined images can be annotated in the editor.")
+            HStack {
+                Toggle("Searchable PDF (on-device OCR)", isOn: $searchable)
+                Picker("PDF Pages", selection: $pdfLayout) {
+                    ForEach(PDFPageLayout.allCases) { Text($0.title).tag($0) }
+                }.frame(width: 260)
+            }.disabled(busy)
+            if busy { Text(progress).font(.caption).accessibilityLabel(progress) }
+            Text("PDF can split long images into paper pages. Combined images can be annotated in the editor.")
                 .font(.caption).foregroundStyle(.secondary)
             if let error { Text(error).foregroundStyle(.red).font(.caption) }
             HStack {
@@ -48,7 +58,7 @@ struct CompositionView: View {
                 Button("Export PNG…") { choose(pdf: false) }.disabled(pages.isEmpty || busy)
                 Button("Export PDF…") { choose(pdf: true) }.disabled(pages.isEmpty || busy)
             }
-        }.padding(20).frame(width: 760, height: 480).background(Color(nsColor: .windowBackgroundColor)).interactiveDismissDisabled(busy)
+        }.padding(20).frame(width: 760, height: 520).background(Color(nsColor: .windowBackgroundColor)).interactiveDismissDisabled(busy)
     }
     private func move(_ id: UUID, by offset: Int) {
         guard let index = pages.firstIndex(where: { $0.id == id }) else { return }
@@ -68,14 +78,15 @@ struct CompositionView: View {
         run(pdf: pdf, target: url)
     }
     private func run(pdf: Bool, target: URL?) {
-        let pages = pages, options = options
+        let pages = pages, options = options, searchable = searchable, pdfLayout = pdfLayout
         busy = true; error = nil
         task = Task {
             defer { busy = false }
             do {
                 let service = CompositionService()
                 if pdf, let target {
-                    let data = try await service.pdf(pages, captions: options.captions)
+                    let data = try await service.pdf(pages, captions: options.captions, searchable: searchable, layout: pdfLayout,
+                        progress: { value in Task { @MainActor in progress = value } })
                     try await model.backgroundExporter.write(data, to: target, overwrite: true)
                 } else {
                     let image = try await service.combine(pages, options: options)

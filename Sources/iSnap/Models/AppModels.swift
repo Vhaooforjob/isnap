@@ -42,12 +42,19 @@ enum CaptureMode: String, CaseIterable, Identifiable, Codable {
 }
 
 enum EditorTool: String, CaseIterable, Identifiable, Codable {
-    case select, crop, rectangle, ellipse, arrow, line, text, spotlight, number, image, redact, blur, pixelate
+    case select, crop, rectangle, ellipse, arrow, line, text, spotlight, number, image, redact, blur, pixelate, freehand, magnifier, highlighter, eraser, ruler, sampler
 
+    var isStroke: Bool { self == .freehand || self == .highlighter }
     var isPrivacyMask: Bool { self == .redact || self == .blur || self == .pixelate }
     var id: String { rawValue }
     var title: String {
         switch self {
+        case .highlighter: String(localized: "Highlighter")
+        case .eraser: String(localized: "Stroke Eraser")
+        case .ruler: String(localized: "Pixel Ruler")
+        case .sampler: String(localized: "Sample Color")
+        case .freehand: String(localized: "Freehand")
+        case .magnifier: String(localized: "Magnifier")
         case .select: String(localized: "Select")
         case .crop: String(localized: "Crop")
         case .rectangle: String(localized: "Rectangle")
@@ -65,6 +72,12 @@ enum EditorTool: String, CaseIterable, Identifiable, Codable {
     }
     var symbol: String {
         switch self {
+        case .highlighter: "highlighter"
+        case .eraser: "eraser"
+        case .ruler: "ruler"
+        case .sampler: "eyedropper"
+        case .freehand: "pencil.tip"
+        case .magnifier: "plus.magnifyingglass"
         case .select: "cursorarrow"
         case .crop: "crop"
         case .rectangle: "rectangle"
@@ -195,6 +208,7 @@ struct LibraryItem: Identifiable, Hashable {
     let modifiedAt: Date
     let dimensions: CGSize
     var byteCount: Int = 0
+    var fileIdentity: String? = nil
     var id: URL { url }
     var name: String { url.lastPathComponent }
 }

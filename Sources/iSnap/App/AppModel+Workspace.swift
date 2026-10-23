@@ -36,9 +36,12 @@ extension AppModel {
         isParsingScreenshot = true
         defer { isParsingScreenshot = false }
         do {
-            let result = try await ScreenshotParserService().parse(cg)
+            let result = try await ScreenshotParserService().parse(cg, includeGlyphs: true, recognizeCodes: false)
             guard document.image === image else { return }
-            sensitiveRegions = result.regions.filter(\.mayContainPrivateInformation)
+            redactionRegions = result.regions
+            redactionMatches = try await RedactionMatcher().match(result.regions, rules: features.state.redactionRules ?? [], wholeLines: true)
+            guard document.image === image else { return }
+            sensitiveRegions = redactionMatches.map(\.region)
             redactionSource = image
             isShowingRedactionReview = true
         } catch { errorMessage = error.localizedDescription }
@@ -52,7 +55,7 @@ extension AppModel {
         // Cover glyph edges and keep applying a group undoable in one step.
         document.addPrivacyMasks(sensitiveRegions.filter { ids.contains($0.id) }.map { $0.rect.insetBy(dx: -4, dy: -4) })
         isShowingRedactionReview = false
-        sensitiveRegions = []; redactionSource = nil
+        sensitiveRegions = []; redactionRegions = []; redactionSource = nil
     }
 
     func saveDraft() {
@@ -257,6 +260,21 @@ extension AppModel {
         } catch { errorMessage = error.localizedDescription }
     }
 
+    func showGuide() {
+        guideController.show { [weak self] in
+            guard let self, !self.isCapturing else { throw CaptureError.cancelled }
+            self.isCapturing = true
+            let windows = NSApp.windows.filter(\.isVisible)
+            windows.forEach { $0.orderOut(nil) }
+            defer { windows.forEach { $0.orderFront(nil) }; self.isCapturing = false }
+            guard let selection = await self.regionCoordinator.selectRegion() else { return nil }
+            try await Task.sleep(for: .milliseconds(250))
+            let result = try await self.captureService.capture(displayID: selection.displayID, region: selection.rect, excludingOwnWindows: true)
+            try Task.checkCancellation()
+            return result.image.cgImage(forProposedRect: nil, context: nil, hints: nil)
+        }
+    }
+
     func beginScrollingCapture() async {
         guard !isCapturing else { return }
         isCapturing = true
@@ -266,16 +284,20 @@ extension AppModel {
             guard let selection = await regionCoordinator.selectRegion() else { throw CaptureError.cancelled }
             lastRegion = selection
             try await Task.sleep(for: .milliseconds(250))
+            let sourceGuard = ScrollSourceGuard(selection: selection)
             let first = try await captureService.capture(displayID: selection.displayID, region: selection.rect, excludingOwnWindows: true)
             guard let image = first.image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { throw ExportError.invalidImage }
             scrollCapture.begin(first: image, capture: { [weak self] in
                 guard let self else { throw CaptureError.cancelled }
+                try sourceGuard.validate()
                 try await Task.sleep(for: .milliseconds(300))
+                try sourceGuard.validate()
                 let result = try await captureService.capture(displayID: selection.displayID, region: selection.rect, excludingOwnWindows: true)
                 guard let image = result.image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { throw ExportError.invalidImage }
                 return image
-            }, scroll: {
-                try await ScrollEventService.scroll(selection)
+            }, scroll: { [weak self] in
+                try sourceGuard.validate()
+                try await ScrollEventService.scroll(selection, direction: self?.scrollCapture.direction ?? .down)
             }, completion: { [weak self] image in
                 windows.forEach { $0.orderFront(nil) }
                 guard let self else { return }

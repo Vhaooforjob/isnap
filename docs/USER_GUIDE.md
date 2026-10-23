@@ -57,11 +57,13 @@ The workflow captures, applies its style, saves/copies as configured and opens t
 Choose **Scrolling Capture…** in the timer menu or the Capture menu. Select a region containing the scrolling content, leaving fixed headers and scrollbars outside it. iSnap takes the first frame and opens a floating control panel.
 
 1. Before the second frame, optionally enter **Top** and **Bottom** pixel counts under **Ignore fixed areas**. Those strips are removed from every frame, including the first; these values lock once another frame is captured.
-2. Scroll down in the source app, keeping part of the previous frame visible, then press **⌃⌥N** from any app or click **Capture Next**. Alternatively enable **Scroll automatically before the next capture**: each capture scrolls the selected region once, then waits for it to settle. macOS Accessibility permission is required only for this option.
+2. Scroll down in the source app, keeping part of the previous frame visible, then press **⌃⌥N** from any app or click **Capture Next**. Alternatively enable **Scroll automatically before the next capture**: each capture scrolls the selected region once, then waits for it to settle. macOS Accessibility permission is required for automatic scrolling.
 3. Review the stitched preview and the zoomable **Seam detail**. Adjust **Overlap (px)** if needed, then choose **Add Frame** (`⌘Return`). **Discard Frame** retries without changing accepted frames.
 4. Repeat, then **Finish** to send the combined image to the normal editor, Library and Capture Line workflow. **Remove Last** undoes the last accepted frame; **Cancel** discards the session.
 
-This captures a fixed region vertically. Automatic scrolling advances one step per request; every seam still requires review. Animated content, repeated patterns and sticky elements may need manual overlap adjustment. The global next-frame shortcut is registered only during a session; the panel reports if another app has reserved it. The output is limited to 60,000 pixels high and 80 million pixels in total.
+For continuous capture, choose **Auto Capture**. The panel hides while iSnap scrolls and captures. **Wait for content (seconds)** controls the settling delay (0.5–3 seconds). Confident seams are accepted automatically after full-height alignment refinement; moving content or uncertain seams pause for manual review. Press **⌃⌥N** to pause at any time. A floating progress panel also provides **Pause**, even if the shortcut is unavailable; iSnap excludes its own windows from captures. After reviewing a pending frame, choose **Add Frame**, then **Auto Capture** to continue.
+
+Capture stops when content remains unchanged, at 50 frames, or at the image/memory limits. Review the preview and choose **Finish** to open the result. Unchanged content can also mean the source app did not scroll; it is not a guarantee that the page ended. Increase the wait time for slow pages or use manual capture. Choose **Down**, **Up**, **Right** or **Left** before adding frames. Fixed-area trims refer to the leading/trailing edges in the selected direction. Capture pauses if the source window moves, resizes, disappears or is covered at the scroll target, or if display geometry changes. This captures a fixed region; animated content, repeated patterns and sticky elements may need manual overlap adjustment. The global shortcut exists only during the session. Output is limited to 60,000 pixels along the stitching axis and 80 million pixels; retained input frames are limited to 120 million pixels.
 
 After a capture:
 
@@ -85,6 +87,8 @@ All shortcuts can be changed in **Settings → Hotkeys**: click a shortcut, then
 | Ellipse | `E` | |
 | Arrow | `A` | Drag in any direction; can be curved. |
 | Line | `L` | |
+| Freehand | `P` | Drag to draw a stroke; the pencil stays active for more strokes. Use Select to move, resize or rotate a stroke. Each stroke has its own layer and undo step. |
+| Magnifier | `M` | Drag around a source region to create a 2× circular/elliptical callout. Move the callout with Select; its source stays anchored. Adjust Magnification (1–5×) in Controls. Samples include visible annotations and privacy masks. |
 | Text | `T` | Click to place, then type in the popup. Double-click to edit later. |
 | Number | `N` | Auto-numbered markers. Edit to switch to A, B, C or a, b, c, or to set the next value. |
 | Spotlight | `S` | Dims everything outside the shape. |
@@ -102,7 +106,7 @@ Preview bitmaps adapt to the view and zoom level and reuse their background. Sav
 
 Also in the toolbar: **Insert Image** (an overlay with its own opacity), **Sticker** (emoji stickers), **Undo**/**Redo**, zoom (pinch on a trackpad, or the zoom buttons; **Fit** resets), **Copy**, **Share**, and **Save**.
 
-The **… menu → Suggest Redactions…** scans the image on device for lines containing email addresses or phone numbers. Select the suggestions to apply; iSnap covers the whole selected line with opaque black. Review the image for information the detector missed. Use **Redact** when text must be completely covered; blur and pixelation are visual effects. Masks remain editable inside the project and are flattened into exported/copied images.
+The **… menu → Suggest Redactions…** scans the image on device for lines containing email addresses, phone numbers or enabled custom rules. In the review sheet, choose **Redaction Rules…** to add, rename/edit, enable/disable or delete rules. Give a rule a project-specific name and a keyword or case-insensitive regular expression (for example `customer-[0-9]+`). Invalid expressions must be corrected before saving. Returning to the review sheet updates suggestions without rescanning. The image preview highlights suggestions in orange and previews selected masks in black. Each suggestion identifies its matching rule. **Cover entire matching lines** is on by default; turn it off to cover matched phrases, using character bounds where Vision supplies them. Incomplete character bounds fall back to the whole line. Matching runs off the UI thread and stops with an error for oversized input or expensive expressions; partial results cannot be applied. Review the image for information the detector missed. Use **Redact** when text must be completely covered; blur and pixelation are visual effects. Masks remain editable inside the project and are flattened into exported/copied images.
 
 ### Editable projects and recovery
 
@@ -143,6 +147,16 @@ Rendering and encoding exports and clipboard images run in the background. The s
 ### Extract text and tables
 
 **Extract Text** recognizes the current rendered image, including visible annotations and masks. In the result, click recognized text regions to select individual lines/cells, then **Copy Selection**. **Keep layout** preserves approximate horizontal spacing. **Export CSV…** exports selected regions, or all regions if none are selected, with columns inferred from their positions. Review inferred tables: OCR may merge cells or misread small text. The text editor and **Copy Text** remain available for correcting/copying the full text.
+
+## macOS Shortcuts
+
+Open the built iSnap app once, then find **iSnap** in the macOS Shortcuts action library:
+
+- **Extract Text from Image** accepts an image file and returns recognized English/Vietnamese text, processed on device.
+- **Style and Export Image** accepts an image, an optional saved canvas preset, PNG/JPEG format, and maximum dimension. Use **0** to keep the output size, or **1–16384** pixels to downscale (never upscale). The result is a file; connect **Save File**, **Quick Look** or another Shortcuts action. Embedded preset backgrounds and watermarks are included.
+- **Run Capture Workflow** opens iSnap, runs a selected saved workflow and returns its rendered image. Workflow save/copy preferences still apply. Region workflows let you select the capture region interactively. Cancellation stops pending work; files already saved remain.
+
+Preset and workflow choices use stable IDs. If one is deleted, edit the Shortcut to choose another. Capture workflows require Screen Recording permission and report a busy error if another capture/export is running. File OCR/export actions do not need screen capture access. Shortcuts actions require the Xcode-built app bundle; the Swift Package executable alone does not install their metadata.
 
 ## The Capture Line
 
@@ -205,13 +219,19 @@ The same Share menu is available on Capture Line cards, in the editor toolbar an
 
 Use the Library search field to match filenames, tags or recognized text in images. Matching OCR snippets appear under cards with the match highlighted. Sort by newest, oldest, name, file size or pixel dimensions. OCR indexing runs locally in the background; an indexing indicator shows progress. **Refresh** retries images that could not be indexed. Very small text may not survive the bounded-resolution image used for indexing.
 
-Use the star to mark favorites, filter by the last 7 or 30 days (file modification date), and choose **Edit Tags** to add comma-separated tags. Tags and favorites are stored locally by file path. Moving or renaming files outside iSnap does not migrate their tags automatically.
+Use the star to mark favorites, filter by the last 7 or 30 days (file modification date), and choose **Edit Tags** to add comma-separated tags. **Quick Tag** adds an existing or new tag to all selected images without replacing their other tags. **Collections → New Collection…** creates a collection and adds the selected images; the Collection picker filters to it. Use **Add Selected to Collection**, **Remove Selected from Collection**, rename or delete from the Collections menu. An image can belong to several collections. Deleting a collection leaves image files intact and removes saved filters associated with that collection.
+
+**Saved Filters → Save Current Filter…** remembers the search, favorite/date filters, collection and sort order. Each saved filter has Apply, Rename and Delete actions. **Reset Filters** returns to all images.
+
+Tags, favorites and collection memberships are stored locally with stable file identity. Same-volume renames/moves are reconciled when the Library refreshes. Use the Metadata menu for backups and explicit relinking after cross-volume moves.
 
 Click a checkbox or Command-click to select multiple images; **Shift-click** selects a range in the current sort order. With the grid focused, arrow keys navigate and **Shift-arrow** extends the selection. **Space** opens Quick Look; Left/Right browse images and Space/Escape closes it. **Return** opens the selected image in the editor. The Library refreshes when iSnap becomes active; deleting images also removes their OCR index and tags, including after deletion in Finder.
 
  **Select All** selects the currently filtered results. **Batch Export…** exports those images to a chosen folder with an optional saved preset or current canvas/watermark, PNG/JPEG format, maximum dimension and filename prefix. Leave the prefix blank to keep source names. Existing files are never overwritten; colliding names receive a suffix. **Stop Export** keeps files already completed. Batch export operates on the saved images in the Library, not unsaved editor layers.
 
-Select saved images and choose **Combine / PDF…**, or open **… → Combine Images / PDF…** and add files. Change their order, edit captions and choose vertical/horizontal layout, spacing and size. **Open Combined Image** sends the result to the editor; **Export PNG…** writes it directly. **Export PDF…** uses one image per page in list order, with optional captions. PDF image dimensions are capped at 4096 pixels on the longest edge; combined PNGs are limited to 80 million pixels and 60,000 pixels per axis. These actions use saved source files, so save current edits first if you want them included.
+Select exactly two images and choose **Compare**. Switch between **Side by Side**, a **Before / After** slider and **Difference**; **Swap** reverses their order. Difference displays identical pixels as black. Images are aligned at the top left with white padding, preserving their relative pixel sizes. Comparison uses original pixels, with synchronized scrolling and Fit/100%/200%/400% zoom. At 100%, one image pixel equals one display pixel, including on Retina screens. **Tolerance** ignores changes below the chosen RGB channel threshold. Draw **Ignore Area** rectangles in Before / After or Difference, or enter pixel coordinates through **Add Area…**. Undo/clear ignored areas and **Export Difference…** to save the diff as PNG. Sources remain unchanged.
+
+Select saved images and choose **Combine / PDF…**, or open **… → Combine Images / PDF…** and add files. Change their order, edit captions and choose vertical/horizontal layout, spacing and size. **Open Combined Image** sends the result to the editor; **Export PNG…** writes it directly. **Export PDF…** offers original-size pages or A4/US Letter pages that split tall images while preserving list order, with optional captions. **Searchable PDF (on-device OCR)** adds invisible, selectable text aligned with the image. It is on by default; disable it for an image-only PDF. OCR uses only visible pixels of the saved files, so flattened solid masks cannot restore their original text. Save your edited image before adding it to the composition. Recognition errors and text too small to read may affect search results. OCR scans overlapping tiles at original resolution, reports image/tile/page progress and supports cancellation. Full-resolution inputs are limited to 80 million pixels; combined PNGs are limited to 80 million pixels and 60,000 pixels per axis. These actions use saved source files, so save current edits first if you want them included.
 
 **Pin on Screen** is available in the Library and Capture Line context menus, and in the editor's **… menu**. Each image floats above normal windows, with opacity, position/size lock, and a close button. Pinned images are independent of the source file and last for the current app session.
 
@@ -267,6 +287,7 @@ Choose **System Default**, **English**, or **Tiếng Việt** from **menu bar ic
 | `⌃⌥3` | Capture a window |
 | `⌃⌥T` | Show or hide the Capture Line now |
 | `⌘O` / `⌘V` | Open / paste an image |
+| `⌘K` | Search commands and saved workflows |
 | `⌘S` / `⇧⌘S` | Save to Library / Export… |
 | `⌘C` | Copy the edited image |
 | `V` `C` `R` `E` `A` `L` `T` `N` `S` | Select, Crop, Rectangle, Ellipse, Arrow, Line, Text, Number, Spotlight |
@@ -281,6 +302,16 @@ Choose **System Default**, **English**, or **Tiếng Việt** from **menu bar ic
 
 The global and Save/Copy shortcuts can be changed in Settings → Hotkeys.
 
+## Find commands and duplicate files
+
+Press **⌘K**, or choose **… → Search Commands…**, to find capture modes, editing tools, OCR/QR, privacy review, Cut Out, step guides, Library, settings and saved workflows. Search supports English and Vietnamese keywords with or without accents, such as `thuoc do`, `lấy màu`, `chup vung` or `cut out`. Use ↑/↓ to choose, Return to run and Escape to close. Commands that require an image or cannot run while busy are disabled.
+
+Choose **Library → Metadata → Find Duplicate Files…**, use the editor's **…** menu, or search for `duplicate`/`trung lap`. iSnap scans images in the current Quick Save folder and groups files whose complete bytes are identical. Visually similar images with different encoding or metadata may not match. Scanning can be canceled; run it again for complete, current results. Unreadable or changed files are reported.
+
+No files are selected or removed automatically. Select the copies you want to review, then choose **Review in Library**. Library clears its search/filter state and selects those files; use its existing **Move to Trash** action and confirmation if you decide to remove them. **Reveal** opens a file's location in Finder. The duplicate scanner does not change future saves.
+
+Batch exports with a maximum dimension now render at that size, retaining the original canvas proportions for padding and styling. JPEG rotation metadata is reflected in dimensions and output orientation. Original-size export remains available with no maximum dimension.
+
 ## Troubleshooting
 
 **"Screen Recording access needs attention".** macOS applies the permission to a running app only after a restart. Use **Restart iSnap** in the alert. If an old build is still listed in System Settings, remove it with `tccutil reset ScreenCapture dev.isnap.app` and grant access again.
@@ -294,3 +325,33 @@ The global and Save/Copy shortcuts can be changed in Settings → Hotkeys.
 ```bash
 /usr/bin/log show --last 10m --info --predicate 'subsystem == "dev.isnap.app"'
 ```
+
+
+## Metadata recovery and backups
+
+Library records retain tags, favorites and collections across Finder renames and moves on the same filesystem using the file's volume/inode/birth identity. Copies have separate records. Use the image context menu's **Rename Image…** to rename without replacing another file. Files missing from the current folder retain detached metadata. **Metadata → Export Metadata Backup…** and **Import Metadata Backup…** back up organization and saved filters as JSON, without copying image pixels. Imported entries only attach automatically when identity matches. Use **Relink Missing Image** after cross-volume moves, restored backups or filesystems without a stable identity. Explicit relinking merges tags/collections/favorites. Replacing a file at the same path is treated as a new image.
+
+## Drawing and pixel tools
+
+Freehand strokes are simplified and smoothed when released; the resulting geometry is shared by preview, export and project files. In the annotation toolbar's **…** menu:
+
+- **Highlighter** uses a translucent multiply stroke to keep underlying dark text readable.
+- **Stroke Eraser** removes parts of freehand/highlighter strokes. It preserves locked/hidden strokes and privacy masks. Each drag is one Undo operation; its radius follows the stroke width control.
+- **Pixel Ruler** draws a measurement in source image pixels, not screen points. Copy its width/height/diagonal from the selection controls.
+- **Sample Color** samples the rendered image including annotations and privacy masks, returning sRGB HEX/RGB, alpha and source pixel coordinates. Copy the value from the controls.
+- **Save Current Style…** saves the current drawing style; apply/delete saved styles in the same menu. Deselect an annotation before changing the default style to save.
+- **Cut Out…** removes a horizontal/vertical strip using source pixel coordinates; the end coordinate is exclusive. Review the highlighted band before Apply. Uncrossed layers shift with the retained pixels. Crossing artwork, rotated layers, spotlights and magnifiers require flattening the visible composition; Undo restores all original editable layers. Privacy masks remain effective in the resulting pixels. Cut Out starts a new crop baseline; Undo also restores the previous crop state.
+
+The canvas exposes visible layers to accessibility. Activate a layer to select it, then use arrow keys to move it (Shift: ten pixels). The Layers panel provides named selection/visibility/lock controls, numeric geometry and reorder commands. Comparison ignored areas and Cut Out support numeric entry for keyboard access.
+
+## QR and step guides
+
+**Extract Text** also finds QR codes. Copy a payload, or choose **Open Link** for an HTTP/HTTPS URL. Links never open automatically; other payload types remain copyable.
+
+Open **… → Step Guide…** to build a guide. **Capture Step** or **⌃⌥G** while the guide window is open starts a region capture; canceling the region picker adds no step. Add existing images, edit captions and reorder with the arrow buttons. A local draft is saved automatically in `~/Library/Application Support/iSnap/GuideDraft`. Only one active draft is maintained; export it before **New Guide…**. Guide capture does not add editor annotations automatically: import a saved, redacted export when needed.
+
+**Export Markdown…** creates a new folder with `README.md` and numbered PNG files. Existing folders are never overwritten. **Export PDF…** exports numbered pages with captions. A numbered header is added outside each screenshot so it does not cover its contents. The guide supports up to 500 steps. Capture/import/export can be canceled; errors keep the current draft available.
+
+## Signed in-app updates
+
+Configured distribution builds use Sparkle for check/download/verified installation; unconfigured builds retain the GitHub release notification. Developer ID, notarization and the signing key must be provisioned by the publisher. See [distribution setup](DISTRIBUTION.md) for the complete release workflow and current validation limits.

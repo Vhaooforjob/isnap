@@ -9,6 +9,8 @@ struct RenderRequest {
     let canvas: CanvasConfiguration
     let includeBackground: Bool
     var backgroundImage: CGImage? = nil
+    // Allows a downsampled source to retain original canvas geometry during bounded export.
+    var sourcePixelSize: CGSize? = nil
 }
 
 enum ExportError: LocalizedError {
@@ -28,7 +30,7 @@ enum ExportRenderer {
         guard let source = request.image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
             throw ExportError.invalidImage
         }
-        let sourceSize = CGSize(width: source.width, height: source.height)
+        let sourceSize = request.sourcePixelSize ?? CGSize(width: source.width, height: source.height)
         let effectivePadding = request.includeBackground && request.canvas.showBackground ? request.canvas.padding : 0
         var outputSize = CGSize(
             width: sourceSize.width + effectivePadding * 2,
@@ -136,11 +138,21 @@ enum ExportRenderer {
             }
         }
 
+        var magnifierImage: CGImage?
+        if request.annotations.contains(where: { $0.type == .magnifier && !$0.isHidden }) {
+            // Sample a flattened, already-redacted image so a lens can never reveal masked source pixels.
+            var plain = CanvasConfiguration(); plain.cornerRadius = 0; plain.shadowSize = 0
+            let sanitized = try render(RenderRequest(image: request.image,
+                annotations: request.annotations.filter { $0.type != .magnifier }, canvas: plain, includeBackground: false),
+                maxPixelDimension: maxPixelDimension)
+            magnifierImage = sanitized.cgImage(forProposedRect: nil, context: nil, hints: nil)
+        }
         AnnotationRenderer.draw(
             request.annotations,
             in: context,
             sourceSize: sourceSize,
-            destination: imageRect
+            destination: imageRect,
+            magnifierImage: magnifierImage
         )
         WatermarkRenderer.draw(request.canvas.watermark, in: context, bounds: CGRect(origin: .zero, size: outputSize))
         guard let result = context.makeImage() else { throw ExportError.invalidImage }
@@ -149,7 +161,7 @@ enum ExportRenderer {
 }
 
 private enum AnnotationRenderer {
-    static func draw(_ annotations: [Annotation], in context: CGContext, sourceSize: CGSize, destination: CGRect) {
+    static func draw(_ annotations: [Annotation], in context: CGContext, sourceSize: CGSize, destination: CGRect, magnifierImage: CGImage?) {
         let annotations = annotations.filter { !$0.isHidden }
         let scaleX = destination.width / sourceSize.width
         let scaleY = destination.height / sourceSize.height
@@ -200,13 +212,44 @@ private enum AnnotationRenderer {
             switch annotation.type {
             case .redact, .blur, .pixelate:
                 drawPrivacyMask(annotation, frame: frame, context: context)
+            case .freehand, .highlighter:
+                if annotation.type == .highlighter { context.setBlendMode(.multiply); context.setAlpha(0.35) }
+                let points = annotation.points.map { map(CGPoint(x: annotation.frame.minX + $0.x, y: annotation.frame.minY + $0.y)) }
+                if let first = points.first {
+                    context.move(to: first)
+                    for point in points.dropFirst() { context.addLine(to: point) }
+                    context.strokePath()
+                }
+            case .magnifier:
+                if let source = magnifierImage {
+                    let area = annotation.magnifierSource ?? annotation.normalizedFrame
+                    let zoom = (annotation.magnification ?? 2).clamped(to: 1...5)
+                    let sample = CGRect(x: area.midX - annotation.frame.width / zoom / 2,
+                        y: area.midY - annotation.frame.height / zoom / 2,
+                        width: annotation.frame.width / zoom, height: annotation.frame.height / zoom)
+                    let factor = CGFloat(source.width) / sourceSize.width
+                    let pixels = sample.applying(CGAffineTransform(scaleX: factor, y: CGFloat(source.height) / sourceSize.height))
+                    let clipped = pixels.intersection(CGRect(x: 0, y: 0, width: source.width, height: source.height)).integral
+                    context.saveGState()
+                    context.addEllipse(in: frame); context.clip()
+                    context.setFillColor(NSColor.white.cgColor); context.fill(frame)
+                    if !clipped.isEmpty, let crop = source.cropping(to: clipped) {
+                        let target = CGRect(x: frame.minX + (clipped.minX - pixels.minX) / pixels.width * frame.width,
+                            y: frame.maxY - (clipped.maxY - pixels.minY) / pixels.height * frame.height,
+                            width: clipped.width / pixels.width * frame.width, height: clipped.height / pixels.height * frame.height)
+                        context.interpolationQuality = .high
+                        context.draw(crop, in: target)
+                    }
+                    context.restoreGState()
+                    context.strokeEllipse(in: frame)
+                }
             case .rectangle:
                 context.addPath(CGPath(roundedRect: frame, cornerWidth: annotation.cornerRadius * scaleX, cornerHeight: annotation.cornerRadius * scaleY, transform: nil))
                 paintPath(annotation, context)
             case .ellipse:
                 context.addEllipse(in: frame)
                 paintPath(annotation, context)
-            case .line, .arrow:
+            case .line, .arrow, .ruler:
                 let rawStart = annotation.lineStartPoint
                 let rawEnd = annotation.lineEndPoint
                 let start = map(rawStart)
@@ -222,6 +265,11 @@ private enum AnnotationRenderer {
                     context.addLine(to: end)
                 }
                 context.strokePath()
+                if annotation.type == .ruler {
+                    let label = Annotation(type: .text, frame: annotation.frame, stroke: annotation.stroke,
+                        text: annotation.measurement, fontSize: max(12, annotation.fontSize * 0.6))
+                    drawText(label, frame: CGRect(x: frame.minX, y: frame.maxY + 4, width: max(260 * scaleX, frame.width), height: 28 * scaleY), context: context, scale: min(scaleX, scaleY))
+                }
                 if annotation.type == .arrow { drawArrowHead(from: start, to: end, annotation: annotation, in: context) }
             case .text:
                 drawText(annotation, frame: frame, context: context, scale: min(scaleX, scaleY))
@@ -247,7 +295,7 @@ private enum AnnotationRenderer {
                     context.interpolationQuality = .high
                     context.draw(image, in: frame)
                 }
-            case .select, .crop, .spotlight:
+            case .select, .crop, .spotlight, .eraser, .sampler:
                 break
             }
             context.restoreGState()

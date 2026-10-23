@@ -16,15 +16,18 @@ struct LayersPanel: View {
                 LazyVStack(spacing: 5) {
                     ForEach(document.annotations.reversed()) { layer in
                         HStack(spacing: 5) {
-                            Image(systemName: layer.type.symbol)
+                            Button { document.select(layer.id, extending: NSEvent.modifierFlags.contains(.shift)) } label: {
+                                Image(systemName: layer.type.symbol)
+                            }.accessibilityLabel("Select \(layer.displayName)")
+                                .accessibilityValue(document.selectedAnnotationIDs.contains(layer.id) ? String(localized: "Selected") : "")
                             TextField("Layer name", text: Binding(get: { layer.displayName },
                                 set: { document.updateLayer(layer.id, name: $0) })).textFieldStyle(.plain)
                             Button { document.updateLayer(layer.id, hidden: !layer.isHidden) } label: {
                                 Image(systemName: layer.isHidden ? "eye.slash" : "eye")
-                            }.help("Show or hide layer")
+                            }.help("Show or hide layer").accessibilityLabel("Show or hide \(layer.displayName)")
                             Button { document.updateLayer(layer.id, locked: !layer.isLocked) } label: {
                                 Image(systemName: layer.isLocked ? "lock.fill" : "lock.open")
-                            }.help("Lock or unlock layer")
+                            }.help("Lock or unlock layer").accessibilityLabel("Lock or unlock \(layer.displayName)")
                         }
                         .buttonStyle(.borderless).font(.caption)
                         .padding(8)
@@ -32,6 +35,10 @@ struct LayersPanel: View {
                             in: RoundedRectangle(cornerRadius: 6))
                         .contentShape(Rectangle())
                         .onTapGesture { document.select(layer.id, extending: NSEvent.modifierFlags.contains(.shift)) }
+                        .contextMenu {
+                            Button("Bring to Front") { document.select(layer.id); document.reorderSelection(toFront: true) }
+                            Button("Send to Back") { document.select(layer.id); document.reorderSelection(toFront: false) }
+                        }
                         .onDrag { dragged = layer.id; return NSItemProvider(object: layer.id.uuidString as NSString) }
                         .onDrop(of: [UTType.text], isTargeted: nil) { _ in
                             guard let dragged else { return false }

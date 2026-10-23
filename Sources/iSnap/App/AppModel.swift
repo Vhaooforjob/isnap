@@ -12,6 +12,11 @@ final class AppModel: ObservableObject {
         var title: String { self == .editor ? String(localized: "Editor") : String(localized: "Library") }
     }
 
+    @Published var isShowingCommands = false
+    @Published var isShowingDuplicates = false
+    @Published var libraryReviewSelection: Set<URL>?
+    @Published var isShowingCutOut = false
+    var pendingCommand: (() -> Void)?
     @Published var section = Section.editor
     @Published var isCapturing = false
     @Published var statusText = String(localized: "Ready")
@@ -32,7 +37,7 @@ final class AppModel: ObservableObject {
     @Published var isShowingWorkflows = false
     @Published var isWorkflowRunning = false
     @Published var workflowShortcutErrors: [String] = []
-    var workflowTask: Task<Void, Never>?
+    var workflowTask: Task<RenderedExport, Error>?
     let workflowHotkeys = GlobalHotkeyService(signature: 0x69535746)
     @Published var uploadHistory: [UploadHistoryEntry] = []
     @Published var retryData: (data: Data, ext: String, provider: CloudProvider)?
@@ -41,11 +46,14 @@ final class AppModel: ObservableObject {
     let backgroundExporter = BackgroundExportService()
     @Published var isParsingScreenshot = false
     @Published var isShowingParsedData = false
+    @Published var recognizedCodes: [RecognizedCode] = []
     @Published var recognizedText = ""
     @Published var recognizedSourceName = String(localized: "Screenshot")
     @Published var recognizedRegions: [RecognizedRegion] = []
     @Published var recognizedImage: NSImage?
     @Published var sensitiveRegions: [RecognizedRegion] = []
+    var redactionRegions: [RecognizedRegion] = []
+    @Published var redactionMatches: [RedactionMatch] = []
     @Published var isShowingRedactionReview = false
     var redactionSource: NSImage?
     @Published var r2Connected = false
@@ -90,6 +98,8 @@ final class AppModel: ObservableObject {
     let regionCoordinator = RegionCaptureCoordinator()
     let exportService = ExportService()
     private let libraryService = LibraryService()
+    let guideController = GuideController()
+    private let appUpdater = AppUpdater()
     private let updateService = UpdateService()
     private let r2Uploader = R2Uploader()
     private let googleDriveUploader = GoogleDriveUploader()
@@ -129,6 +139,7 @@ final class AppModel: ObservableObject {
         self.features.$errorMessage.compactMap { $0 }.sink { [weak self] in self?.errorMessage = $0 }.store(in: &cancellables)
         document.objectWillChange.sink { [weak self] in self?.objectWillChange.send() }.store(in: &cancellables)
         guard connectsServices else { return }
+        AutomationContext.model = self
         self.features.$state.map { $0.workflows ?? [] }.removeDuplicates().sink { [weak self] workflows in
             guard let self else { return }
             workflowShortcutErrors = workflowHotkeys.registerActions(workflows.map { workflow in
@@ -285,6 +296,7 @@ final class AppModel: ObservableObject {
             guard document.image === image else { return }
             guard document.revision == revision else { return }
             recognizedRegions = result.regions
+            recognizedCodes = result.codes
             recognizedImage = NSImage(cgImage: output.image, size: CGSize(width: output.image.width, height: output.image.height))
             recognizedText = result.text
             recognizedSourceName = document.sourceName
@@ -381,6 +393,11 @@ final class AppModel: ObservableObject {
 
     func copy() { performExport(.copy) }
 
+    func renameLibraryItem(_ item: LibraryItem, name: String) async throws {
+        try await libraryService.rename(item, name: name, root: settings.value.quickSave.folder)
+        await reloadLibrary()
+    }
+
     func reloadLibrary() async {
         let reloadID = UUID()
         libraryReloadID = reloadID
@@ -390,7 +407,7 @@ final class AppModel: ObservableObject {
             let items = try await libraryService.items(in: folder)
             guard libraryReloadID == reloadID, settings.value.quickSave.folder == folder else { return }
             libraryItems = items
-            features.pruneMetadata(in: folder, keeping: Set(items.map(\.url)))
+            features.reconcileLibrary(items, in: folder)
             if connectsServices { startIndexing(items) }
             guard connectsServices else { return }
             widgetPublishTask?.cancel()
@@ -484,7 +501,8 @@ final class AppModel: ObservableObject {
         loadIntoEditor(CaptureResult(image: image, sourceName: url.lastPathComponent))
     }
 
-    func checkForUpdates() async {
+    func checkForUpdates(interactive: Bool = true) async {
+        if appUpdater.check(interactive: interactive) { return }
         do {
             let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0"
             if let release = try await updateService.latestRelease(currentVersion: version),

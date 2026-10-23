@@ -44,6 +44,8 @@ Integrated cloud services are [in the backlog](docs/BACKLOG.md#cloud-integration
 
 - **Text extraction (OCR)** on device with macOS Vision, English and Vietnamese
 - **Screenshot Library** with recent captures, quick open, reveal, and move to Trash
+- **Command search (`⌘K`)** with English/Vietnamese keywords, keyboard navigation and saved workflows
+- **Duplicate file review** with cancellable scanning and explicit selection before reviewing files in Library
 - **Storage** overview with live sizes per folder and one-click **Clear Cache**
 - **Widgets** (small and medium) for recent screenshots
 - **English and Tiếng Việt** interface, switchable from the menu bar icon
@@ -56,6 +58,13 @@ Integrated cloud services are [in the backlog](docs/BACKLOG.md#cloud-integration
 - **Draft manager:** thumbnails, rename, bulk Trash and optional retention; Library adds Quick Look, range selection, sorting and highlighted OCR matches
 - **Scrolling capture helpers:** session shortcut, zoomable seam detail, fixed header/footer trimming and optional one-step automatic scrolling
 - **Reusable canvas presets** and floating pinned images with opacity and position lock
+- **Continuous scrolling capture** with settling detection, refined seam matching and a global pause shortcut
+- **Image comparison:** side-by-side, before/after slider and pixel-difference preview
+- **Collections and saved filters**, plus additive quick tags for selected Library images
+- **Searchable PDF** with on-device OCR and selectable text from saved, flattened images
+- **Custom redaction rules** for keywords and regular expressions, with review before applying
+- **Freehand drawing and magnifier callouts** with editable layers, undo and masked-source rendering
+- **macOS Shortcuts actions** for OCR, preset/resize/export and saved capture workflows
 
 | Hotkeys | Text extraction | Storage |
 | --- | --- | --- |
@@ -71,7 +80,7 @@ Integrated cloud services are [in the backlog](docs/BACKLOG.md#cloud-integration
 
 Download the `.dmg` (or the `.zip`) from the [latest release](https://github.com/Vhaooforjob/isnap/releases/latest).
 
-See [what changed in 1.0.4 compared with 1.0.3](docs/releases/v1.0.4.md): a compact, resizable inspector, empty Library layout fixes, quicker Library access, and cloud integrations moved to backlog.
+See [what changed in 1.0.5 compared with 1.0.4](docs/releases/v1.0.5.md): command search, duplicate review, stronger Library organization, long-image OCR/PDF, comparison, drawing tools and step guides.
 
 **Requirements:** macOS 14 Sonoma or later, Apple Silicon or Intel.
 
@@ -116,3 +125,11 @@ ISNAP_SHOTS_DIR=/tmp/isnap-shots ISNAP_DEMO_DIR=/path/to/demo-images swift test 
 iSnap is released under the [MIT License](LICENSE).
 
 Third-party notices are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+### Additional refinements
+
+Library metadata survives same-volume renames/moves and supports JSON backup/relinking. Long-image OCR runs at native resolution and PDF export supports A4/Letter pagination. Redaction review previews masks with rule explanations and phrase selection. Comparison supports native pixels, zoom, tolerance, ignored regions and PNG diff export. The editor adds highlight/partial erasing, saved styles, Cut Out, pixel measurement and color sampling. OCR also reads QR codes. Step guides support hotkey capture, captions, reordering and Markdown/PDF export. Scrolling capture supports four directions, a Pause panel and source-window checks.
+
+See [usage](docs/USER_GUIDE.md), [validation and remaining device checks](docs/VALIDATION.md), and [signed release/update setup](docs/DISTRIBUTION.md).
+
+Batch export now decodes and renders at the requested size while retaining original canvas proportions. EXIF dimensions, thumbnail/comparison cache invalidation and stroke simplification have regression coverage.

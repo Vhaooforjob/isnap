@@ -8,6 +8,7 @@ struct ScreenshotParseView: View {
     let sourceName: String
     var image: NSImage?
     var regions: [RecognizedRegion] = []
+    var codes: [RecognizedCode] = []
     @State private var selected: Set<UUID> = []
     @State private var preserveLayout = false
     @State private var error: String?
@@ -24,6 +25,20 @@ struct ScreenshotParseView: View {
                     .keyboardShortcut(.defaultAction)
             }
 
+            if !codes.isEmpty {
+                GroupBox("QR Codes") {
+                    ScrollView {
+                        ForEach(codes) { code in
+                            HStack {
+                                Text(code.payload).textSelection(.enabled).lineLimit(3)
+                                Spacer()
+                                Button("Copy") { copy(code.payload) }
+                                if let url = code.webURL { Button("Open Link") { NSWorkspace.shared.open(url) } }
+                            }.padding(4)
+                        }
+                    }.frame(maxHeight: 140)
+                }
+            }
             if text.isEmpty {
                 ContentUnavailableView(
                     "No Text Found",

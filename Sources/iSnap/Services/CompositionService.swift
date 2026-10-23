@@ -49,25 +49,89 @@ actor CompositionService {
         return result
     }
 
-    func pdf(_ pages: [CompositionPage], captions: Bool) throws -> Data {
+    func pdf(_ pages: [CompositionPage], captions: Bool, searchable: Bool = false,
+             layout: PDFPageLayout = .original, progress: (@Sendable (String) -> Void)? = nil) async throws -> Data {
         guard !pages.isEmpty else { throw ExportError.invalidImage }
         let data = NSMutableData()
         guard let consumer = CGDataConsumer(data: data), let context = CGContext(consumer: consumer, mediaBox: nil, nil) else { throw ExportError.encodingFailed }
-        for page in pages {
+        let parser = ScreenshotParserService()
+        for (index, page) in pages.enumerated() {
             try Task.checkCancellation()
-            try autoreleasepool {
-                guard let image = ImageIOService.thumbnail(at: page.url, maxPixelSize: 4096) else { throw ExportError.invalidImage }
-                let height = CGFloat(image.height) + (captions ? 48 : 0)
-                var box = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: height)
-                let boxData = Data(bytes: &box, count: MemoryLayout<CGRect>.size)
-                context.beginPDFPage([kCGPDFContextMediaBox: boxData] as CFDictionary)
-                context.draw(image, in: CGRect(x: 0, y: captions ? 48 : 0, width: image.width, height: image.height))
-                if captions { drawCaption(page.caption, in: context, rect: CGRect(x: 12, y: 0, width: CGFloat(image.width) - 24, height: 48)) }
-                context.endPDFPage()
+            let image = try ImageIOService.fullImage(at: page.url)
+            let regions: [RecognizedRegion]
+            if searchable {
+                regions = try await parser.parse(image, recognizeCodes: false, progress: { tile, count in
+                    progress?(String(localized: "Image \(index + 1)/\(pages.count): OCR \(tile)/\(count)"))
+                }).regions
+            } else { regions = [] }
+            let size = CGSize(width: image.width, height: image.height)
+            let slices = Self.pageSlices(size: size, layout: layout, captions: captions, regions: regions)
+            for (number, slice) in slices.enumerated() {
+                try Task.checkCancellation()
+                try autoreleasepool {
+                    guard let crop = image.cropping(to: slice) else { throw ExportError.invalidImage }
+                    let caption: CGFloat = captions ? 48 : 0
+                    let pageSize = layout.size ?? CGSize(width: slice.width, height: slice.height + caption)
+                    let margin: CGFloat = layout == .original ? 0 : 24
+                    let scale = min((pageSize.width - margin * 2) / slice.width, (pageSize.height - margin * 2 - caption) / slice.height)
+                    let rect = CGRect(x: margin, y: pageSize.height - margin - slice.height * scale,
+                        width: slice.width * scale, height: slice.height * scale)
+                    var box = CGRect(origin: .zero, size: pageSize)
+                    let boxData = Data(bytes: &box, count: MemoryLayout<CGRect>.size)
+                    context.beginPDFPage([kCGPDFContextMediaBox: boxData] as CFDictionary)
+                    context.draw(crop, in: rect)
+                    if captions { drawCaption(page.caption, in: context, rect: CGRect(x: margin + 4, y: margin, width: pageSize.width - margin * 2 - 8, height: caption)) }
+                    let local = regions.filter { slice.contains(CGPoint(x: $0.rect.midX, y: $0.rect.midY)) }.map {
+                        RecognizedRegion(text: $0.text, rect: $0.rect.offsetBy(dx: -slice.minX, dy: -slice.minY))
+                    }
+                    context.saveGState()
+                    context.translateBy(x: rect.minX, y: rect.minY)
+                    context.scaleBy(x: scale, y: scale)
+                    Self.drawSearchableText(local, imageHeight: slice.height, offset: 0, in: context)
+                    context.restoreGState()
+                    context.endPDFPage()
+                }
+                progress?(String(localized: "Image \(index + 1)/\(pages.count): page \(number + 1)/\(slices.count)"))
             }
         }
         context.closePDF()
+        try Task.checkCancellation()
         return data as Data
+    }
+
+    static func pageSlices(size: CGSize, layout: PDFPageLayout, captions: Bool, regions: [RecognizedRegion] = []) -> [CGRect] {
+        guard size.width > 0, size.height > 0 else { return [] }
+        guard let paper = layout.size else { return [CGRect(origin: .zero, size: size)] }
+        let scale = (paper.width - 48) / size.width
+        let height = max(1, floor((paper.height - 48 - (captions ? 48 : 0)) / scale))
+        var slices: [CGRect] = [], y: CGFloat = 0
+        while y < size.height {
+            var end = min(size.height, y + height)
+            // Prefer a break before a text line instead of splitting its glyphs.
+            if end < size.height, let crossing = regions.filter({ $0.rect.minY < end && $0.rect.maxY > end && $0.rect.minY > y + height * 0.8 }).map(\.rect.minY).min() {
+                end = max(y + 1, floor(crossing) - 2)
+            }
+            slices.append(CGRect(x: 0, y: y, width: size.width, height: end - y)); y = end
+        }
+        return slices
+    }
+
+    static func drawSearchableText(_ regions: [RecognizedRegion], imageHeight: CGFloat, offset: CGFloat, in context: CGContext) {
+        for region in regions where !region.text.isEmpty && region.rect.width > 0 && region.rect.height > 0 {
+            let line = CTLineCreateWithAttributedString(NSAttributedString(string: region.text,
+                attributes: [.font: NSFont.systemFont(ofSize: region.rect.height)]))
+            var ascent: CGFloat = 0, descent: CGFloat = 0
+            let width = CGFloat(CTLineGetTypographicBounds(line, &ascent, &descent, nil))
+            guard width > 0, ascent + descent > 0 else { continue }
+            context.saveGState()
+            context.translateBy(x: region.rect.minX, y: imageHeight - region.rect.maxY + offset)
+            context.scaleBy(x: region.rect.width / width, y: region.rect.height / (ascent + descent))
+            context.textMatrix = .identity
+            context.textPosition = CGPoint(x: 0, y: descent)
+            context.setTextDrawingMode(.invisible)
+            CTLineDraw(line, context)
+            context.restoreGState()
+        }
     }
 
     private func drawCaption(_ text: String, in context: CGContext, rect: CGRect) {
@@ -76,5 +140,24 @@ actor CompositionService {
         context.saveGState(); context.clip(to: rect)
         context.textPosition = CGPoint(x: rect.minX + 4, y: rect.midY - 7)
         CTLineDraw(line, context); context.restoreGState()
+    }
+}
+
+enum PDFPageLayout: String, CaseIterable, Identifiable {
+    case original, a4, letter
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .original: String(localized: "Original Image Size")
+        case .a4: "A4"
+        case .letter: "US Letter"
+        }
+    }
+    var size: CGSize? {
+        switch self {
+        case .original: nil
+        case .a4: CGSize(width: 595.28, height: 841.89)
+        case .letter: CGSize(width: 612, height: 792)
+        }
     }
 }

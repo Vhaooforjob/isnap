@@ -53,6 +53,9 @@ struct CaptureToolbar: View {
                 if FeatureAvailability.cloud {
                     Button("Upload History…") { model.isShowingUploadHistory = true }
                 }
+                Button("Search Commands…") { model.isShowingCommands = true }
+                Button("Find Duplicate Files…") { model.isShowingDuplicates = true }
+                Button("Step Guide…", action: model.showGuide)
                 Button("Combine Images / PDF…") { model.compositionPages = []; model.isShowingComposition = true }
                 Menu("Recent Drafts") {
                     Button("Manage Drafts…") { model.isShowingDrafts = true }
